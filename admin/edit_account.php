@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../includes/auth_check.php';
+require_once __DIR__ . '/../includes/check.php';
 require_role('admin');
 require_once __DIR__ . '/../config/db.php';
 
