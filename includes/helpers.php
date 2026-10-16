@@ -75,3 +75,104 @@ function file_statuses() {
 function status_label($status) {
     return ucwords(str_replace('_', ' ', $status));
 }
+
+// ============================================
+// Upload helpers (used by program/upload.php)
+// ============================================
+
+function upload_allowed_extensions() {
+    return ['pdf', 'docx', 'xlsx'];
+}
+
+function upload_max_bytes() {
+    return 10 * 1024 * 1024; // 10 MB
+}
+
+/**
+ * "College > CASE-IT > BSIT" style names -> a safe folder name like "BSIT".
+ */
+function safe_folder_name($name) {
+    $folder = preg_replace('/[^A-Za-z0-9_-]+/', '_', trim($name));
+    $folder = trim($folder, '_');
+    return $folder === '' ? 'program' : $folder;
+}
+
+/**
+ * Keeps the file readable but removes anything risky
+ * ("Grading Sheet (final).PDF" -> "Grading_Sheet_final.pdf").
+ */
+function safe_file_name($original) {
+    $ext  = strtolower(pathinfo($original, PATHINFO_EXTENSION));
+    $base = pathinfo($original, PATHINFO_FILENAME);
+    $base = preg_replace('/[^A-Za-z0-9 _-]+/', '', $base);
+    $base = preg_replace('/\s+/', '_', trim($base));
+    $base = substr(trim($base, '_-'), 0, 80);
+    if ($base === '') {
+        $base = 'file';
+    }
+    return $base . '.' . $ext;
+}
+
+/**
+ * Checks one entry of $_FILES. Returns '' when it is fine,
+ * otherwise a message that can be shown to the user.
+ */
+function validate_upload($file) {
+    if (!is_array($file) || !isset($file['error'])) {
+        return "Please choose a file.";
+    }
+
+    switch ($file['error']) {
+        case UPLOAD_ERR_OK:
+            break;
+        case UPLOAD_ERR_NO_FILE:
+            return "Please choose a file.";
+        case UPLOAD_ERR_INI_SIZE:
+        case UPLOAD_ERR_FORM_SIZE:
+            return "That file is too big for the server settings (upload_max_filesize is "
+                 . ini_get('upload_max_filesize') . "). The system allows up to 10 MB.";
+        default:
+            return "The upload failed (error code " . (int)$file['error'] . "). Please try again.";
+    }
+
+    if ($file['size'] <= 0) {
+        return "That file is empty.";
+    }
+    if ($file['size'] > upload_max_bytes()) {
+        return "That file is larger than 10 MB.";
+    }
+
+    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    if (!in_array($ext, upload_allowed_extensions(), true)) {
+        return "Only PDF, DOCX and XLSX files are allowed.";
+    }
+    return '';
+}
+
+/**
+ * Moves the uploaded file into uploads/<ProgramFolder>/ with a timestamp prefix
+ * (so two uploads with the same name never overwrite each other).
+ * Returns the path to store in the database, or false on failure.
+ * $mover exists only so this can be tested outside a real upload.
+ */
+function store_uploaded_file($tmp_path, $original_name, $program_name, $mover = 'move_uploaded_file') {
+    $folder = safe_folder_name($program_name);
+    $dir    = dirname(__DIR__) . '/uploads/' . $folder;
+
+    if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) {
+        return false;
+    }
+
+    $safe = safe_file_name($original_name);
+    $time = time();
+    do {
+        $name = date('Ymd_His', $time) . '_' . $safe;
+        $full = $dir . '/' . $name;
+        $time++;
+    } while (file_exists($full));
+
+    if (!$mover($tmp_path, $full)) {
+        return false;
+    }
+    return 'uploads/' . $folder . '/' . $name;
+}
