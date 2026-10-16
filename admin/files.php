@@ -33,13 +33,14 @@ asort($program_options);
 $filter_program = (int)($_GET['program'] ?? 0);
 $filter_status  = $_GET['status'] ?? '';
 $search         = trim($_GET['q'] ?? '');
+$show_archived  = isset($_GET['archived']);   // old, replaced versions are hidden unless ticked
 
 if (!in_array($filter_status, file_statuses(), true)) {
     $filter_status = '';
 }
 
-$sql = "SELECT f.file_id, f.file_path, f.status, f.created_at, f.program_id,
-               u.username AS uploaded_by, c.category_name
+$sql = "SELECT f.file_id, f.file_path, f.status, f.created_at, f.program_id, f.is_archived,
+               COALESCE(u.full_name, u.username) AS uploaded_by, c.category_name
         FROM files f
         JOIN users u ON f.uploaded_by = u.user_id
         LEFT JOIN file_categories c ON f.category_id = c.category_id";
@@ -48,6 +49,9 @@ $where  = [];
 $types  = '';
 $params = [];
 
+if (!$show_archived) {
+    $where[] = 'f.is_archived = 0';
+}
 if ($filter_program) {
     $where[]  = 'f.program_id = ?';
     $types   .= 'i';
@@ -86,8 +90,8 @@ while ($row = $result->fetch_assoc()) {
 $stmt->close();
 ksort($groups);
 
-$total_files = $conn->query("SELECT COUNT(*) AS c FROM files")->fetch_assoc()['c'];
-$is_filtered = ($filter_program || $filter_status !== '' || $search !== '');
+$total_files = $conn->query("SELECT COUNT(*) AS c FROM files WHERE is_archived = 0")->fetch_assoc()['c'];
+$is_filtered = ($filter_program || $filter_status !== '' || $search !== '' || $show_archived);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -136,6 +140,14 @@ $is_filtered = ($filter_program || $filter_status !== '' || $search !== '');
             <input type="text" name="q" id="q" value="<?= htmlspecialchars($search) ?>" placeholder="Search...">
         </div>
 
+        <div class="filter-field">
+            <span class="filter-spacer" aria-hidden="true">&nbsp;</span>
+            <label class="check-label">
+                <input type="checkbox" name="archived" id="archived" value="1" <?= $show_archived ? 'checked' : '' ?>>
+                Include archived versions
+            </label>
+        </div>
+
         <button type="submit">Filter</button>
         <?php if ($is_filtered): ?>
             <a href="files.php" class="btn-reset">Reset</a>
@@ -176,6 +188,9 @@ $is_filtered = ($filter_program || $filter_status !== '' || $search !== '');
                                 <span class="badge badge-status-<?= htmlspecialchars($f['status']) ?>">
                                     <?= htmlspecialchars(status_label($f['status'])) ?>
                                 </span>
+                                <?php if ($f['is_archived']): ?>
+                                    <span class="badge badge-archived">Archived</span>
+                                <?php endif; ?>
                             </td>
                             <td><?= date('M d, Y h:i A', strtotime($f['created_at'])) ?></td>
                             <td class="actions-cell">

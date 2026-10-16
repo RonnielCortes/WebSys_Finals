@@ -15,21 +15,24 @@ $error = "";
 $success = "";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $full_name = trim($_POST['full_name'] ?? '');
     $email = trim($_POST['email']);
     $new_password = $_POST['new_password'];
 
-    if ($email === '') {
+    if ($full_name === '') {
+        $error = "Full name cannot be blank.";
+    } elseif ($email === '') {
         $error = "Email cannot be blank.";
     } else {
         if ($new_password !== '') {
             // Admin is also resetting the password
             $hashed = password_hash($new_password, PASSWORD_DEFAULT);
-            $stmt = $conn->prepare("UPDATE users SET email = ?, password = ? WHERE user_id = ?");
-            $stmt->bind_param("ssi", $email, $hashed, $user_id);
+            $stmt = $conn->prepare("UPDATE users SET full_name = ?, email = ?, password = ? WHERE user_id = ?");
+            $stmt->bind_param("sssi", $full_name, $email, $hashed, $user_id);
         } else {
-            // Email only, leave password untouched
-            $stmt = $conn->prepare("UPDATE users SET email = ? WHERE user_id = ?");
-            $stmt->bind_param("si", $email, $user_id);
+            // Name + email only, leave password untouched
+            $stmt = $conn->prepare("UPDATE users SET full_name = ?, email = ? WHERE user_id = ?");
+            $stmt->bind_param("ssi", $full_name, $email, $user_id);
         }
 
         if ($stmt->execute()) {
@@ -44,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Fetch current user info to pre-fill the form
 $stmt = $conn->prepare(
-    "SELECT u.username, u.email, r.role_name, p.program_name
+    "SELECT u.username, u.full_name, u.email, r.role_name, p.program_name
      FROM users u
      JOIN roles r ON u.role_id = r.role_id
      LEFT JOIN programs p ON u.program_id = p.program_id
@@ -61,49 +64,49 @@ if (!$user) {
 ?>
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <title>Edit Account</title>
-    <link rel="stylesheet" href="../css/style.css">
+<meta charset="UTF-8">
+<title>Edit Account</title>
+<link rel="stylesheet" href="../css/style.css">
 </head>
-
 <body class="with-sidebar">
 
-    <?php include __DIR__ . '/../includes/admin_sidebar.php'; ?>
+<?php include __DIR__ . '/../includes/admin_sidebar.php'; ?>
 
-    <main class="main-content">
-        <h2>Edit Account</h2>
-        <p class="muted">
-            <?= htmlspecialchars($user['username']) ?>
-            — <?= htmlspecialchars($user['role_name']) ?>
-            <?php if ($user['program_name']): ?> (<?= htmlspecialchars($user['program_name']) ?>)<?php endif; ?>
-        </p>
+<main class="main-content">
+    <h2>Edit Account</h2>
+    <p class="muted">
+        <?= htmlspecialchars($user['username']) ?>
+        — <?= htmlspecialchars($user['role_name']) ?>
+        <?php if ($user['program_name']): ?> (<?= htmlspecialchars($user['program_name']) ?>)<?php endif; ?>
+    </p>
 
-        <?php if ($error): ?>
-            <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
-        <?php endif; ?>
+    <?php if ($error): ?>
+        <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
+    <?php endif; ?>
 
-        <form method="POST" action="edit_account.php?id=<?= $user_id ?>" class="edit-form">
-            <input type="hidden" name="user_id" value="<?= $user_id ?>">
+    <form method="POST" action="edit_account.php?id=<?= $user_id ?>" class="edit-form">
+        <input type="hidden" name="user_id" value="<?= $user_id ?>">
 
-            <label>Username</label>
-            <input type="text" value="<?= htmlspecialchars($user['username']) ?>" disabled>
-            <small class="muted">Username cannot be changed.</small>
+        <label>Username</label>
+        <input type="text" value="<?= htmlspecialchars($user['username']) ?>" disabled>
+        <small class="muted">Username cannot be changed.</small>
 
-            <label>Email</label>
-            <input type="email" name="email" value="<?= htmlspecialchars($user['email']) ?>" required>
+        <label>Full Name</label>
+        <input type="text" name="full_name" maxlength="100" value="<?= htmlspecialchars($user['full_name'] ?? '') ?>" required>
 
-            <label>New Password</label>
-            <input type="password" name="new_password" placeholder="Leave blank to keep current password">
-            <small class="muted">Only fill this in if you want to reset the password.</small>
+        <label>Email</label>
+        <input type="email" name="email" value="<?= htmlspecialchars($user['email']) ?>" required>
 
-            <button type="submit">Save Changes</button>
-        </form>
+        <label>New Password</label>
+        <input type="password" name="new_password" placeholder="Leave blank to keep current password">
+        <small class="muted">Only fill this in if you want to reset the password.</small>
 
-        <p><a href="manage_accounts.php">&larr; Back to Manage Accounts</a></p>
-    </main>
+        <button type="submit">Save Changes</button>
+    </form>
+
+    <p><a href="manage_accounts.php">&larr; Back to Manage Accounts</a></p>
+</main>
 
 </body>
-
 </html>
