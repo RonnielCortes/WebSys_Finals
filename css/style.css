@@ -9,7 +9,16 @@ body {
     padding: 40px 20px;
 }
 
+/* Login / Register: center the card horizontally AND vertically */
+body:has(.auth-container) {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .auth-container {
+    width: 100%;
     max-width: 400px;
     margin: 0 auto;
     background: #fff;
