@@ -410,3 +410,46 @@ body.with-sidebar {
 }
 .filter-bar .check-label input { width: auto; min-width: 0; }
 .filter-bar .filter-spacer { font-size: 12px; margin-bottom: 4px; }
+
+/* ============================================
+   PROGRAM SIDE (upload form, notes, resubmit)
+   ============================================ */
+.alert-info {
+    background: #e0f2fe;
+    color: #075985;
+}
+
+.edit-form textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    resize: vertical;
+}
+
+.edit-form input[type="file"] {
+    padding: 8px;
+    background: #f8fafc;
+}
+
+.remark-box {
+    margin-top: 6px;
+    padding: 6px 10px;
+    background: #ffedd5;
+    color: #9a3412;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.btn-resubmit {
+    background: #ea580c;
+    color: #fff;
+}
+
+.filter-bar .btn-right {
+    margin-left: auto;
+    padding: 10px 14px;
+    font-size: 13px;
+}
