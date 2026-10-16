@@ -176,3 +176,13 @@ function store_uploaded_file($tmp_path, $original_name, $program_name, $mover = 
     }
     return 'uploads/' . $folder . '/' . $name;
 }
+
+// Number of unread notifications for a user (shown as a bubble in the sidebars)
+function unread_notifications($conn, $user_id) {
+    $stmt = $conn->prepare("SELECT COUNT(*) AS c FROM notifications WHERE user_id = ? AND is_read = 0");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $c = (int)$stmt->get_result()->fetch_assoc()['c'];
+    $stmt->close();
+    return $c;
+}

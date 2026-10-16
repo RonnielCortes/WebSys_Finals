@@ -453,3 +453,56 @@ body.with-sidebar {
     padding: 10px 14px;
     font-size: 13px;
 }
+
+/* ============================================
+   QA SIDE (tabs, ping, notifications)
+   ============================================ */
+.nav-bubble {
+    display: inline-block;
+    min-width: 18px;
+    padding: 0 6px;
+    margin-left: 6px;
+    background: #dc2626;
+    color: #fff;
+    border-radius: 9px;
+    font-size: 11px;
+    line-height: 18px;
+    text-align: center;
+}
+
+.tab-row { display: flex; gap: 6px; margin: 16px 0 8px; }
+.tab-row .tab {
+    padding: 8px 16px;
+    border-radius: 6px;
+    background: #e5e7eb;
+    color: #374151;
+    text-decoration: none;
+    font-size: 14px;
+}
+.tab-row .tab.active { background: #1e3a8a; color: #fff; }
+
+.ping-box { display: inline-block; vertical-align: middle; }
+.ping-box summary { display: inline-block; cursor: pointer; list-style: none; }
+.ping-box summary::-webkit-details-marker { display: none; }
+.ping-box form { margin-top: 6px; min-width: 220px; }
+.ping-box textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 13px;
+    margin-bottom: 6px;
+}
+
+.notif-list { list-style: none; padding: 0; margin: 16px 0; }
+.notif-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 14px;
+    background: #fff;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+}
+.notif-list li.unread { background: #eff6ff; font-weight: 600; border-left: 3px solid #2563eb; }
+.notif-list small { color: #6b7280; white-space: nowrap; font-weight: normal; }
