@@ -18,7 +18,12 @@ function validateRegisterForm()
         {
           alert('Passwords do not match!');
           return false;
-
         }
         return true;
+}
+
+function togglePasswordVisibility()
+{
+    const password = document.getElementById('password');
+    password.type = password.type === 'password' ? 'text' : "password";
 }
