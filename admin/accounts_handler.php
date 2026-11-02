@@ -17,7 +17,7 @@ if (!$user_id || !$action) {
     exit();
 }
 
-
+// Safety: prevent an Admin from deactivating their own account
 if ($user_id === $admin_id && $action === 'deactivate') {
     header("Location: manage_accounts.php?flash=cannot_self_deactivate");
     exit();
@@ -63,5 +63,7 @@ switch ($action) {
         break;
 }
 
-header("Location: manage_accounts.php?flash=" . urlencode($flash));
+// Approve/Reject buttons on the dashboard send return=dashboard
+$back = (($_POST['return'] ?? '') === 'dashboard') ? 'dashboard.php' : 'manage_accounts.php';
+header("Location: " . $back . "?flash=" . urlencode($flash));
 exit();
