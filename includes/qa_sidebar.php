@@ -11,6 +11,9 @@ $unread = isset($conn) ? unread_notifications($conn, (int)$_SESSION['user_id']) 
         <a href="/websys/qa/dashboard.php" class="<?= $active_page === 'dashboard' ? 'active' : '' ?>">
             <?= icon('dashboard') ?>Dashboard
         </a>
+        <a href="/websys/qa/files.php" class="<?= $active_page === 'files' ? 'active' : '' ?>">
+            <?= icon('folder') ?>Files
+        </a>
         <a href="/websys/notifications.php" class="<?= $active_page === 'notifications' ? 'active' : '' ?>">
             <?= icon('notifications') ?>Notifications<?php if ($unread): ?><span class="nav-bubble"><?= $unread ?></span><?php endif; ?>
         </a>

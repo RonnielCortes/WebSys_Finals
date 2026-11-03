@@ -14,8 +14,16 @@ $qa_id   = (int)$_SESSION['user_id'];
 $file_id = (int)($_POST['file_id'] ?? 0);
 $remark  = trim($_POST['remark'] ?? '');
 
+// Where to go afterwards: the Files page (keeping its folder/filters) or the dashboard
+$back = 'dashboard.php?view=out&';
+if (($_POST['return_to'] ?? '') === 'files') {
+    parse_str((string)($_POST['qs'] ?? ''), $keep);
+    unset($keep['flash']);
+    $back = 'files.php?' . http_build_query($keep) . '&';
+}
+
 if (!$file_id || $remark === '') {
-    header("Location: dashboard.php?flash=ping_failed");
+    header("Location: " . $back . "flash=ping_failed");
     exit();
 }
 $remark = mb_substr($remark, 0, 500);
@@ -56,9 +64,9 @@ try {
     $stmt->close();
 
     $conn->commit();
-    header("Location: dashboard.php?flash=pinged");
+    header("Location: " . $back . "flash=pinged");
 } catch (Throwable $e) {
     $conn->rollback();
-    header("Location: dashboard.php?flash=ping_failed");
+    header("Location: " . $back . "flash=ping_failed");
 }
 exit();
