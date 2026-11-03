@@ -102,8 +102,13 @@ $is_filtered = ($filter_status !== '' || $search !== '' || $show_archived);
 <?php include __DIR__ . '/../includes/program_sidebar.php'; ?>
 
 <main class="main-content">
-    <h2>My Files</h2>
-    <p class="muted"><?= htmlspecialchars($program_name) ?> &middot; welcome, <?= htmlspecialchars($_SESSION['username']) ?>!</p>
+    <div class="page-top">
+        <div>
+            <h2>My Files</h2>
+            <p class="muted"><?= htmlspecialchars($program_name) ?> &middot; welcome, <?= htmlspecialchars(session_display_name($conn)) ?>!</p>
+        </div>
+        <div class="top-date"><?= date('D, M d, Y') ?></div>
+    </div>
 
     <?php if ($flash === 'uploaded'): ?>
         <div class="alert alert-success">File sent to QA.</div>

@@ -82,8 +82,13 @@ $is_filtered = ($filter_program || $search !== '');
 <?php include __DIR__ . '/../includes/qa_sidebar.php'; ?>
 
 <main class="main-content">
-    <h2>QA Dashboard</h2>
-    <p class="muted">Welcome, <?= htmlspecialchars($_SESSION['username']) ?>! Files from every program, grouped by where they came from.</p>
+    <div class="page-top">
+        <div>
+            <h2>QA Dashboard</h2>
+            <p class="muted">Welcome, <?= htmlspecialchars(session_display_name($conn)) ?>! Files from every program, grouped by where they came from.</p>
+        </div>
+        <div class="top-date"><?= date('D, M d, Y') ?></div>
+    </div>
 
     <?php if ($flash === 'pinged'): ?>
         <div class="alert alert-success">Sent back to the program for revision. They have been notified.</div>

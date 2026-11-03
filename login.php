@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'];
 
     $stmt = $conn->prepare(
-        "SELECT u.user_id, u.username, u.password, u.account_status, u.is_active,
+        "SELECT u.user_id, u.username, u.full_name, u.password, u.account_status, u.is_active,
                 u.program_id, r.role_name
          FROM users u
          JOIN roles r ON u.role_id = r.role_id
@@ -42,6 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Success — set up the session
             $_SESSION['user_id']    = $user['user_id'];
             $_SESSION['username']   = $user['username'];
+            $_SESSION['full_name']  = $user['full_name'] ?: $user['username'];
             $_SESSION['role_name']  = $user['role_name'];
             $_SESSION['program_id'] = $user['program_id'];
 
@@ -71,75 +72,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <title>Login - Document Management System</title>
-    <link rel="stylesheet" href="css/style.css?v=<?= @filemtime(__DIR__ . '/css/style.css') ?>">
+<meta charset="UTF-8">
+<title>Login - Document Management System</title>
+<link rel="stylesheet" href="css/style.css?v=<?= @filemtime(__DIR__ . '/css/style.css') ?>">
 </head>
-
 <body>
-    <div class="auth-split">
-        <div class="auth-form-panel">
-            <h2>Welcome back</h2>
-            <p class="form-sub">Please enter your account details.</p>
+<div class="auth-split">
+<div class="auth-form-panel">
+    <h2>Welcome back</h2>
+    <p class="form-sub">Please enter your account details.</p>
 
-            <?php if ($error): ?>
-                <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
-            <?php endif; ?>
+    <?php if ($error): ?>
+        <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
+    <?php endif; ?>
 
-            <form method="POST" action="login.php">
-                <label>Username</label>
-                <input type="text" name="username" autocomplete="username" required autofocus>
+    <form method="POST" action="login.php">
+        <label>Username</label>
+        <input type="text" name="username" autocomplete="username" required autofocus>
 
-                <label>Password</label>
-                <div class="pw-wrap">
-                    <input type="password" name="password" id="password" required>
-                    <button type="button" class="pw-toggle" onclick="togglePassword(this)" aria-label="Show password" title="Show / hide password">
-                        <svg class="eye-open" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
-                            <circle cx="12" cy="12" r="3" />
-                        </svg>
-                        <svg class="eye-closed" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a19.8 19.8 0 0 1 5.06-5.94M9.9 4.24A10.9 10.9 0 0 1 12 4c7 0 11 7 11 7a19.7 19.7 0 0 1-3.17 4.19M14.12 14.12A3 3 0 1 1 9.88 9.88" />
-                            <line x1="1" y1="1" x2="23" y2="23" />
-                        </svg>
-                    </button>
-                </div>
-
-                <button type="submit">Sign in</button>
-            </form>
-
-            <p>Don't have an account? <a href="register.php">Register here</a></p>
+        <label>Password</label>
+        <div class="pw-wrap">
+            <input type="password" name="password" id="password" required>
+            <button type="button" class="pw-toggle" onclick="togglePassword(this)" aria-label="Show password" title="Show / hide password">
+                <svg class="eye-open" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg class="eye-closed" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a19.8 19.8 0 0 1 5.06-5.94M9.9 4.24A10.9 10.9 0 0 1 12 4c7 0 11 7 11 7a19.7 19.7 0 0 1-3.17 4.19M14.12 14.12A3 3 0 1 1 9.88 9.88"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
         </div>
-        <aside class="auth-info-panel">
-            <div class="info-badge">QADMS</div>
-            <h2>Quality Assurance Document Management System</h2>
-            <p class="info-lead">One place for programs and offices to send their approved documents to QA, and for QA to review them.</p>
 
-            <ul class="info-steps">
-                <li>
-                    <span class="step-num">1</span>
-                    <div><strong>Programs &amp; Offices send</strong><small>Upload approved files (PDF, DOCX, XLSX) straight to QA.</small></div>
-                </li>
-                <li>
-                    <span class="step-num">2</span>
-                    <div><strong>QA reviews</strong><small>See every file by program, download it, or ping it back for revision.</small></div>
-                </li>
-                <li>
-                    <span class="step-num">3</span>
-                    <div><strong>Re-submit &amp; track</strong><small>Fix flagged files and re-send. Older versions are kept in the history.</small></div>
-                </li>
-            </ul>
+        <button type="submit">Sign in</button>
+    </form>
 
-            <div class="info-card">
-                <strong>Approved accounts only</strong>
-                <span>New accounts are reviewed by the Admin before they can sign in.</span>
-            </div>
-        </aside>
-    </div>
+    <p>Don't have an account? <a href="register.php">Register here</a></p>
+</div>
+    <aside class="auth-info-panel">
+        <div class="info-badge">QADMS</div>
+        <h2>Quality Assurance Document Management System</h2>
+        <p class="info-lead">One place for programs and offices to send their approved documents to QA, and for QA to review them.</p>
 
-    <script src="js/main.js?v=<?= @filemtime(__DIR__ . '/js/main.js') ?>"></script>
+        <ul class="info-steps">
+            <li>
+                <span class="step-num">1</span>
+                <div><strong>Programs &amp; Offices send</strong><small>Upload approved files (PDF, DOCX, XLSX) straight to QA.</small></div>
+            </li>
+            <li>
+                <span class="step-num">2</span>
+                <div><strong>QA reviews</strong><small>See every file by program, download it, or ping it back for revision.</small></div>
+            </li>
+            <li>
+                <span class="step-num">3</span>
+                <div><strong>Re-submit &amp; track</strong><small>Fix flagged files and re-send. Older versions are kept in the history.</small></div>
+            </li>
+        </ul>
+
+        <div class="info-card">
+            <strong>Approved accounts only</strong>
+            <span>New accounts are reviewed by the Admin before they can sign in.</span>
+        </div>
+    </aside>
+</div>
+
+<script src="js/main.js?v=<?= @filemtime(__DIR__ . '/js/main.js') ?>"></script>
 </body>
-
 </html>

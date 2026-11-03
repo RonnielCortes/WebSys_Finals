@@ -140,8 +140,13 @@ function initials($name) {
 <?php include __DIR__ . '/../includes/admin_sidebar.php'; ?>
 
 <main class="main-content">
-    <h2>Admin Dashboard</h2>
-    <p class="muted">Welcome back, <?= htmlspecialchars($_SESSION['username']) ?>! Here's what's happening in the system.</p>
+    <div class="page-top">
+        <div>
+            <h2>Admin Dashboard</h2>
+            <p class="muted">Welcome back, <?= htmlspecialchars(session_display_name($conn)) ?>! Here's what's happening in the system.</p>
+        </div>
+        <div class="top-date"><?= date('D, M d, Y') ?></div>
+    </div>
 
     <!-- stat cards -->
     <div class="dash-cards">
