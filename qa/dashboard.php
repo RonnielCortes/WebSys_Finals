@@ -75,7 +75,7 @@ $is_filtered = ($filter_program || $search !== '');
 <head>
 <meta charset="UTF-8">
 <title>QA Dashboard</title>
-<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/style.css?v=<?= @filemtime(__DIR__ . '/../css/style.css') ?>">
 </head>
 <body class="with-sidebar">
 

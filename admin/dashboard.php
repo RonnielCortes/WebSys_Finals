@@ -234,7 +234,7 @@ function initials($name) {
                     <?php endforeach; ?>
                     </tbody>
                 </table>
-                <a href="files.php" class="dash-link">View all files &rarr;</a>
+                <a href="files.php" class="dash-link">View all files</a>
             <?php endif; ?>
         </section>
 
