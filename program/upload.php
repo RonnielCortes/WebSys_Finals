@@ -230,7 +230,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <button type="submit"><?= $old ? 'Re-submit' : 'Send to QA' ?></button>
     </form>
 
-    <p><a href="dashboard.php">&larr; Back to My Files</a></p>
+    <p><a href="dashboard.php">Back to My Files</a></p>
 </main>
 
 </body>

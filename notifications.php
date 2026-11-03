@@ -59,7 +59,7 @@ include __DIR__ . '/includes/' . ($role === 'qa' ? 'qa_sidebar.php' : 'program_s
             <?php endforeach; ?>
         </ul>
     <?php endif; ?>
-    <p><a href="<?= $dir ?>/dashboard.php">&larr; Back</a></p>
+    <p><a href="<?= $dir ?>/dashboard.php">Back</a></p>
 </main>
 </body>
 </html>
