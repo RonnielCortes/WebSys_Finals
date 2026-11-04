@@ -43,7 +43,7 @@ function togglePassword(btn) {
 // Any <form class="js-confirm-delete" data-filename="..."> shows a big,
 // clear box first. The form only submits if the user presses "Yes, delete".
 // ============================================
-function openConfirmBox(title, message, yesText, onYes) {
+function openConfirmBox(title, message, yesText, onYes, tone) {
     const overlay = document.createElement('div');
     overlay.className = 'confirm-overlay';
     overlay.innerHTML =
@@ -57,6 +57,7 @@ function openConfirmBox(title, message, yesText, onYes) {
     overlay.querySelector('h3').textContent = title;
     overlay.querySelector('p').textContent = message;
     overlay.querySelector('.confirm-yes').textContent = yesText;
+    if (tone === 'good') overlay.querySelector('.confirm-yes').classList.add('good');
 
     function close() {
         document.removeEventListener('keydown', onKey);
@@ -105,7 +106,8 @@ document.addEventListener('submit', function (e) {
             form.dataset.confirmTitle || 'Are you sure?',
             form.dataset.confirmMessage || '',
             form.dataset.confirmYes || 'Yes',
-            function () { form.submit(); }
+            function () { form.submit(); },
+            form.dataset.confirmTone
         );
     }
 });
