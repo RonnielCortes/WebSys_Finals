@@ -8,15 +8,10 @@ $unread = isset($conn) ? unread_notifications($conn, (int)$_SESSION['user_id']) 
 <aside class="sidebar">
     <?= sidebar_brand('Program / Office') ?>
     <nav class="sidebar-nav">
-        <a href="/websys/program/dashboard.php" class="<?= $active_page === 'files' ? 'active' : '' ?>">
-            <?= icon('files') ?>My Files
-        </a>
-        <a href="/websys/program/upload.php" class="<?= $active_page === 'upload' ? 'active' : '' ?>">
-            <?= icon('upload') ?>Upload File
-        </a>
-        <a href="/websys/notifications.php" class="<?= $active_page === 'notifications' ? 'active' : '' ?>">
-            <?= icon('notifications') ?>Notifications<?php if ($unread): ?><span class="nav-bubble"><?= $unread ?></span><?php endif; ?>
-        </a>
+        <?= nav_link('/websys/program/dashboard.php', 'files', 'My Files', $active_page === 'files') ?>
+        <?= nav_link('/websys/program/upload.php', 'upload', 'Upload File', $active_page === 'upload') ?>
+        <?= nav_link('/websys/notifications.php', 'notifications', 'Notifications', $active_page === 'notifications', $unread) ?>
     </nav>
     <?= sidebar_user($conn ?? null) ?>
 </aside>
+<?= sidebar_script() ?>
