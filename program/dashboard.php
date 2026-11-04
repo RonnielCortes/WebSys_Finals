@@ -114,8 +114,14 @@ $is_filtered = ($filter_status !== '' || $search !== '' || $show_archived);
         <div class="alert alert-success">File sent to QA.</div>
     <?php elseif ($flash === 'resubmitted'): ?>
         <div class="alert alert-success">New version sent to QA. The old version was moved to your archive.</div>
+    <?php elseif ($flash === 'replaced'): ?>
+        <div class="alert alert-success">File replaced. The old one was moved to your archive and QA was told.</div>
+    <?php elseif ($flash === 'deleted'): ?>
+        <div class="alert alert-success">File deleted. QA was told.</div>
     <?php elseif ($flash === 'cannot_replace'): ?>
-        <div class="alert alert-error">That file can't be re-submitted. It is either not waiting for revision or was already replaced.</div>
+        <div class="alert alert-error">That file can't be replaced anymore. QA may have already started on it, or it was already replaced.</div>
+    <?php elseif ($flash === 'cannot_delete'): ?>
+        <div class="alert alert-error">That file can't be deleted anymore. QA may have already started on it.</div>
     <?php endif; ?>
 
     <div class="stats-row">
@@ -217,10 +223,27 @@ $is_filtered = ($filter_status !== '' || $search !== '' || $show_archived);
                             <?php endif; ?>
                         </td>
                         <td><?= date('M d, Y h:i A', strtotime($f['created_at'])) ?></td>
-                        <td class="actions-cell">
+                        <td class="actions-cell program-actions">
                             <a href="../download.php?id=<?= (int)$f['file_id'] ?>" class="btn-small btn-download">Download</a>
-                            <?php if ($f['status'] === 'needs_revision' && !$f['is_archived']): ?>
-                                <a href="upload.php?replace=<?= (int)$f['file_id'] ?>" class="btn-small btn-resubmit">Re-submit</a>
+
+                            <?php if (!$f['is_archived']): ?>
+                                <?php if ($f['status'] === 'needs_revision'): ?>
+                                    <a href="upload.php?replace=<?= (int)$f['file_id'] ?>" class="btn-small btn-resubmit">Re-submit</a>
+                                <?php elseif (program_can_replace($f['status'])): ?>
+                                    <a href="upload.php?replace=<?= (int)$f['file_id'] ?>" class="btn-small btn-replace">Replace</a>
+                                <?php endif; ?>
+
+                                <?php if (program_can_delete($f['status'])): ?>
+                                    <form method="POST" action="delete.php" class="js-confirm-delete"
+                                          data-filename="<?= htmlspecialchars(display_name($f['file_path'])) ?>">
+                                        <input type="hidden" name="file_id" value="<?= (int)$f['file_id'] ?>">
+                                        <button type="submit" class="btn-small btn-delete">Delete</button>
+                                    </form>
+                                <?php endif; ?>
+
+                                <?php if (!program_can_replace($f['status'])): ?>
+                                    <span class="lock-note">Locked</span>
+                                <?php endif; ?>
                             <?php endif; ?>
                         </td>
                     </tr>
@@ -230,5 +253,6 @@ $is_filtered = ($filter_status !== '' || $search !== '' || $show_archived);
     <?php endif; ?>
 </main>
 
+<script src="../js/main.js?v=<?= @filemtime(__DIR__ . '/../js/main.js') ?>"></script>
 </body>
 </html>

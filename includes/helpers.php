@@ -186,3 +186,36 @@ function unread_notifications($conn, $user_id) {
     $stmt->close();
     return $c;
 }
+
+// ============================================
+// Program: replace / delete rules (used by program/upload.php, delete.php, dashboard.php)
+// ============================================
+
+// Program may swap the file while QA has not started (sent/received),
+// or when QA sent it back (needs_revision).
+function program_can_replace($status) {
+    return in_array($status, ['sent', 'received', 'needs_revision'], true);
+}
+
+// Program may withdraw (delete) a file only while QA has not started on it.
+// Once it is under_review / approved / rejected it is locked.
+function program_can_delete($status) {
+    return in_array($status, ['sent', 'received'], true);
+}
+
+// Sends one notification to every active, approved QA user.
+function notify_active_qa($conn, $file_id, $message) {
+    $message = mb_substr($message, 0, 250);
+    $qa = $conn->query(
+        "SELECT u.user_id FROM users u
+         JOIN roles r ON u.role_id = r.role_id
+         WHERE r.role_name = 'qa' AND u.account_status = 'approved' AND u.is_active = 1"
+    );
+    $stmt = $conn->prepare("INSERT INTO notifications (user_id, file_id, message) VALUES (?, ?, ?)");
+    while ($q = $qa->fetch_assoc()) {
+        $qa_id = (int)$q['user_id'];
+        $stmt->bind_param("iis", $qa_id, $file_id, $message);
+        $stmt->execute();
+    }
+    $stmt->close();
+}

@@ -2,7 +2,9 @@
 // ============================================
 // program/upload.php
 //   upload.php              -> send a NEW file to QA
-//   upload.php?replace=ID   -> re-submit a file QA flagged (needs_revision).
+//   upload.php?replace=ID   -> replace a file. Allowed only while the file is
+//                              'sent' / 'received' (QA has not started) or
+//                              'needs_revision' (QA sent it back).
 //                              The old version is archived, not overwritten.
 // ============================================
 require_once __DIR__ . '/../includes/check.php';
@@ -53,13 +55,16 @@ if ($replace_id) {
     $old = $stmt->get_result()->fetch_assoc();
     $stmt->close();
 
-    if (!$old || $old['is_archived'] || $old['status'] !== 'needs_revision') {
+    if (!$old || $old['is_archived'] || !program_can_replace($old['status'])) {
         header("Location: dashboard.php?flash=cannot_replace");
         exit();
     }
 }
 
 $error = "";
+// true  = QA sent it back and Program is fixing it (re-submit)
+// false = QA has not started yet and Program just swaps the file (replace)
+$is_resubmit = $old && $old['status'] === 'needs_revision';
 $selected_category = $old ? (int)$old['category_id'] : 0;
 $note = "";
 
@@ -102,16 +107,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $new_id = (int)$conn->insert_id;
                 $stmt->close();
 
-                // 2) re-submit: archive the old version (only if it is still the current one)
+                // 2) archive the old version (only if it is still the current one
+                //    AND its status has not changed since the page was opened)
                 if ($old) {
                     $stmt = $conn->prepare(
                         "UPDATE files SET is_archived = 1
-                         WHERE file_id = ? AND is_archived = 0 AND status = 'needs_revision'"
+                         WHERE file_id = ? AND program_id = ? AND is_archived = 0 AND status = ?"
                     );
-                    $stmt->bind_param("i", $old['file_id']);
+                    $stmt->bind_param("iis", $old['file_id'], $program_id, $old['status']);
                     $stmt->execute();
                     if ($stmt->affected_rows !== 1) {
-                        throw new RuntimeException("The file was already replaced or changed.");
+                        throw new RuntimeException("QA already started working on this file, so it can't be replaced anymore.");
                     }
                     $stmt->close();
 
@@ -127,7 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 // 3) history on the NEW file
-                $action  = $old ? 'resubmitted' : 'sent';
+                $action  = $is_resubmit ? 'resubmitted' : 'sent';
                 $remarks = $note;
                 if ($old) {
                     $remarks = "Replaces file #" . $old['file_id'] . ($note !== '' ? ". " . $note : "");
@@ -140,46 +146,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->close();
 
                 // 4) tell every active QA user
-                $qa = $conn->query(
-                    "SELECT u.user_id FROM users u
-                     JOIN roles r ON u.role_id = r.role_id
-                     WHERE r.role_name = 'qa' AND u.account_status = 'approved' AND u.is_active = 1"
-                );
-                $message = ($old ? "Re-submitted file from " : "New file from ")
-                         . $program_name . ": " . display_name($path);
-                $message = mb_substr($message, 0, 250);
-
-                $stmt = $conn->prepare("INSERT INTO notifications (user_id, file_id, message) VALUES (?, ?, ?)");
-                while ($q = $qa->fetch_assoc()) {
-                    $qa_id = (int)$q['user_id'];
-                    $stmt->bind_param("iis", $qa_id, $new_id, $message);
-                    $stmt->execute();
-                }
-                $stmt->close();
+                $prefix = $is_resubmit ? "Re-submitted file from "
+                        : ($old ? "Replaced file from " : "New file from ");
+                notify_active_qa($conn, $new_id, $prefix . $program_name . ": " . display_name($path));
 
                 $conn->commit();
 
-                header("Location: dashboard.php?flash=" . ($old ? 'resubmitted' : 'uploaded'));
+                header("Location: dashboard.php?flash=" . ($is_resubmit ? 'resubmitted' : ($old ? 'replaced' : 'uploaded')));
                 exit();
 
             } catch (Throwable $e) {
                 $conn->rollback();
+                $shown = ($e instanceof RuntimeException);
                 // don't leave an orphan file on disk if the database part failed
                 $full = dirname(__DIR__) . '/' . $path;
                 if (is_file($full)) {
                     unlink($full);
                 }
-                $error = "Something went wrong while saving. Please try again.";
+                $error = $shown ? $e->getMessage() : "Something went wrong while saving. Please try again.";
             }
         }
     }
 }
+
+$page_title = $is_resubmit ? 'Re-submit File' : ($old ? 'Replace File' : 'Upload File');
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title><?= $old ? 'Re-submit File' : 'Upload File' ?></title>
+<title><?= $page_title ?></title>
 <link rel="stylesheet" href="../css/style.css?v=<?= @filemtime(__DIR__ . '/../css/style.css') ?>">
 </head>
 <body class="with-sidebar">
@@ -187,7 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <?php include __DIR__ . '/../includes/program_sidebar.php'; ?>
 
 <main class="main-content">
-    <h2><?= $old ? 'Re-submit File' : 'Upload File' ?></h2>
+    <h2><?= $page_title ?></h2>
     <p class="muted">
         Sending as <strong><?= htmlspecialchars($program_name) ?></strong>
         &middot; PDF, DOCX or XLSX &middot; up to 10 MB
@@ -196,7 +192,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php if ($old): ?>
         <div class="alert alert-info">
             You are replacing <strong><?= htmlspecialchars(display_name($old['file_path'])) ?></strong>.
-            The old version is kept in your history, not deleted.
+            The old version is kept in your archive, not erased.
         </div>
     <?php endif; ?>
 
@@ -220,14 +216,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php endforeach; ?>
         </select>
 
-        <label for="document"><?= $old ? 'New version of the file' : 'File' ?></label>
+        <label for="document"><?= $old ? 'New file' : 'File' ?></label>
         <input type="file" name="document" id="document" accept=".pdf,.docx,.xlsx" required>
 
         <label for="note">Note for QA (optional)</label>
         <textarea name="note" id="note" rows="3" maxlength="500"
-                  placeholder="<?= $old ? 'What did you fix?' : 'Anything QA should know?' ?>"><?= htmlspecialchars($note) ?></textarea>
+                  placeholder="<?= $is_resubmit ? 'What did you fix?' : ($old ? 'Why are you replacing it?' : 'Anything QA should know?') ?>"><?= htmlspecialchars($note) ?></textarea>
 
-        <button type="submit"><?= $old ? 'Re-submit' : 'Send to QA' ?></button>
+        <button type="submit"><?= $is_resubmit ? 'Re-submit' : ($old ? 'Replace file' : 'Send to QA') ?></button>
     </form>
 
     <p><a href="dashboard.php">Back to My Files</a></p>
