@@ -704,19 +704,13 @@ body:has(.auth-split) {
     display: flex;
     gap: 20px;
     width: 100%;
-    max-width: 1000px;
+    max-width: 460px;
     padding: 20px;
-    background: rgba(255, 255, 255, 0.55);
-    border: 1px solid rgba(255, 255, 255, 0.8);
-    border-radius: 24px;
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    box-shadow: 0 20px 60px rgba(76, 29, 149, 0.25);
 }
 
 /* ---------- left: form ---------- */
 .auth-form-panel {
-    flex: 1 1 46%;
+    flex: 1 1 auto;
     padding: 30px 36px;
     display: flex;
     flex-direction: column;

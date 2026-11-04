@@ -80,6 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
 <div class="auth-split">
 <div class="auth-form-panel">
+    <div class="info-badge">QADMS</div>
     <h2>Welcome back</h2>
     <p class="form-sub">Please enter your account details.</p>
 
@@ -105,31 +106,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <p>Don't have an account? <a href="register.php">Register here</a></p>
 </div>
-    <aside class="auth-info-panel">
-        <div class="info-badge">QADMS</div>
-        <h2>Quality Assurance Document Management System</h2>
-        <p class="info-lead">One place for programs and offices to send their approved documents to QA, and for QA to review them.</p>
-
-        <ul class="info-steps">
-            <li>
-                <span class="step-num">1</span>
-                <div><strong>Programs &amp; Offices send</strong><small>Upload approved files (PDF, DOCX, XLSX) straight to QA.</small></div>
-            </li>
-            <li>
-                <span class="step-num">2</span>
-                <div><strong>QA reviews</strong><small>See every file by program, download it, or ping it back for revision.</small></div>
-            </li>
-            <li>
-                <span class="step-num">3</span>
-                <div><strong>Re-submit &amp; track</strong><small>Fix flagged files and re-send. Older versions are kept in the history.</small></div>
-            </li>
-        </ul>
-
-        <div class="info-card">
-            <strong>Approved accounts only</strong>
-            <span>New accounts are reviewed by the Admin before they can sign in.</span>
-        </div>
-    </aside>
 </div>
 
 <script src="js/main.js?v=<?= @filemtime(__DIR__ . '/js/main.js') ?>"></script>
