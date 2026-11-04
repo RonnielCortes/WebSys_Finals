@@ -13,7 +13,6 @@ function icon($name) {
         'upload'        => '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v12"/>',
         'notifications' => '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
         'logout'        => '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/>',
-        'collapse'      => '<path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/>',
     ];
     $p = $paths[$name] ?? '';
     return '<svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">' . $p . '</svg>';
@@ -47,28 +46,10 @@ function name_initials($name) {
     return $i;
 }
 
-// Brand block at the top of every sidebar (logo + name + the button that minimizes the sidebar)
+// Brand block at the top of every sidebar
 function sidebar_brand($subtitle) {
-    return '<div class="sidebar-header"><div class="brand-logo">QA</div>'
-         . '<div class="brand-text"><b>QADMS</b><small>' . htmlspecialchars($subtitle) . '</small></div>'
-         . '<button type="button" class="sidebar-toggle" aria-label="Minimize sidebar" title="Minimize / expand menu">'
-         . icon('collapse') . '</button></div>';
-}
-
-// One link in the sidebar menu. The text sits in .nav-label so it can be hidden
-// when the sidebar is minimized (only the icon is left; the title shows on hover).
-function nav_link($href, $icon_name, $label, $is_active, $bubble = 0) {
-    return '<a href="' . htmlspecialchars($href) . '" class="' . ($is_active ? 'active' : '') . '"'
-         . ' title="' . htmlspecialchars($label) . '">'
-         . icon($icon_name) . '<span class="nav-label">' . htmlspecialchars($label) . '</span>'
-         . ($bubble ? '<span class="nav-bubble">' . (int)$bubble . '</span>' : '')
-         . '</a>';
-}
-
-// Loads js/sidebar.js (minimize/expand + remembers the choice). Put it right after </aside>.
-function sidebar_script() {
-    $v = @filemtime(dirname(__DIR__) . '/js/sidebar.js');
-    return '<script src="/websys/js/sidebar.js?v=' . (int)$v . '"></script>';
+    return '<div class="sidebar-header"><div class="brand-logo">QA</div><div><b>QADMS</b><small>'
+         . htmlspecialchars($subtitle) . '</small></div></div>';
 }
 
 // User block at the bottom of every sidebar (avatar + name + role + logout)
