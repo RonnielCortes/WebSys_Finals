@@ -50,7 +50,7 @@ function openConfirmBox(title, message, yesText, onYes) {
         '<div class="confirm-box" role="dialog" aria-modal="true">' +
         '<h3></h3><p></p>' +
         '<div class="confirm-buttons">' +
-        '<button type="button" class="confirm-no">No, keep it</button>' +
+        '<button type="button" class="confirm-no">No, go back</button>' +
         '<button type="button" class="confirm-yes"></button>' +
         '</div></div>';
 
@@ -82,15 +82,30 @@ function openConfirmBox(title, message, yesText, onYes) {
 
 document.addEventListener('submit', function (e) {
     const form = e.target;
-    if (!form.classList || !form.classList.contains('js-confirm-delete')) return;
+    if (!form.classList) return;
 
-    e.preventDefault();
-    const name = form.dataset.filename || 'this file';
-    openConfirmBox(
-        'Delete this file?',
-        '"' + name + '" will be removed from your list and QA will be told. ' +
-        'This can only be done because QA has not started reviewing it yet.',
-        'Yes, delete',
-        function () { form.submit(); } // form.submit() does not re-trigger this listener
-    );
+    // Program > My Files: delete a file
+    if (form.classList.contains('js-confirm-delete')) {
+        e.preventDefault();
+        const name = form.dataset.filename || 'this file';
+        openConfirmBox(
+            'Delete this file?',
+            '"' + name + '" will be removed from your list and QA will be told. ' +
+            'This can only be done because QA has not started reviewing it yet.',
+            'Yes, delete',
+            function () { form.submit(); } // form.submit() does not re-trigger this listener
+        );
+        return;
+    }
+
+    // Anywhere else: <form class="js-confirm" data-confirm-title data-confirm-message data-confirm-yes>
+    if (form.classList.contains('js-confirm')) {
+        e.preventDefault();
+        openConfirmBox(
+            form.dataset.confirmTitle || 'Are you sure?',
+            form.dataset.confirmMessage || '',
+            form.dataset.confirmYes || 'Yes',
+            function () { form.submit(); }
+        );
+    }
 });

@@ -1,4 +1,8 @@
 <?php
+// ============================================
+// admin/edit_account.php
+// Admin can change a user's name and email, and reset their password.
+// ============================================
 require_once __DIR__ . '/../includes/check.php';
 require_role('admin');
 require_once __DIR__ . '/../config/db.php';
@@ -12,35 +16,56 @@ if (!$user_id) {
 }
 
 $error = "";
-$success = "";
+$posted_name  = null;
+$posted_email = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $full_name = trim($_POST['full_name'] ?? '');
-    $email = trim($_POST['email']);
-    $new_password = $_POST['new_password'];
+    $full_name    = trim($_POST['full_name'] ?? '');
+    $email        = trim($_POST['email'] ?? '');
+    $new_password = $_POST['new_password'] ?? '';
+
+    // keep what was typed if there is an error
+    $posted_name  = $full_name;
+    $posted_email = $email;
 
     if ($full_name === '') {
         $error = "Full name cannot be blank.";
     } elseif ($email === '') {
         $error = "Email cannot be blank.";
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error = "Please enter a valid email address.";
+    } elseif ($new_password !== '' && strlen($new_password) < 8) {
+        $error = "The new password must be at least 8 characters.";
     } else {
-        if ($new_password !== '') {
-            // Admin is also resetting the password
-            $hashed = password_hash($new_password, PASSWORD_DEFAULT);
-            $stmt = $conn->prepare("UPDATE users SET full_name = ?, email = ?, password = ? WHERE user_id = ?");
-            $stmt->bind_param("sssi", $full_name, $email, $hashed, $user_id);
-        } else {
-            // Name + email only, leave password untouched
-            $stmt = $conn->prepare("UPDATE users SET full_name = ?, email = ? WHERE user_id = ?");
-            $stmt->bind_param("ssi", $full_name, $email, $user_id);
-        }
-
-        if ($stmt->execute()) {
+        try {
+            // Two accounts must not share one email
+            $stmt = $conn->prepare("SELECT user_id FROM users WHERE email = ? AND user_id <> ? LIMIT 1");
+            $stmt->bind_param("si", $email, $user_id);
+            $stmt->execute();
+            $dup = $stmt->get_result()->fetch_assoc();
             $stmt->close();
-            header("Location: manage_accounts.php?flash=updated");
-            exit();
-        } else {
-            $error = "Update failed: " . $conn->error;
+
+            if ($dup) {
+                $error = "That email is already used by another account.";
+            } else {
+                if ($new_password !== '') {
+                    // Admin is also resetting the password
+                    $hashed = password_hash($new_password, PASSWORD_DEFAULT);
+                    $stmt = $conn->prepare("UPDATE users SET full_name = ?, email = ?, password = ? WHERE user_id = ?");
+                    $stmt->bind_param("sssi", $full_name, $email, $hashed, $user_id);
+                } else {
+                    // Name + email only, leave password untouched
+                    $stmt = $conn->prepare("UPDATE users SET full_name = ?, email = ? WHERE user_id = ?");
+                    $stmt->bind_param("ssi", $full_name, $email, $user_id);
+                }
+                $stmt->execute();
+                $stmt->close();
+
+                header("Location: manage_accounts.php?flash=updated");
+                exit();
+            }
+        } catch (Throwable $e) {
+            $error = "The changes could not be saved. Please try again.";
         }
     }
 }
@@ -56,11 +81,18 @@ $stmt = $conn->prepare(
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
+$stmt->close();
 
 if (!$user) {
     header("Location: manage_accounts.php");
     exit();
 }
+
+if ($posted_name !== null) {
+    $user['full_name'] = $posted_name;
+    $user['email']     = $posted_email;
+}
+$role_text = ($user['role_name'] === 'qa') ? 'QA' : ucfirst($user['role_name']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -76,8 +108,8 @@ if (!$user) {
 <main class="main-content">
     <h2>Edit Account</h2>
     <p class="muted">
-        <?= htmlspecialchars($user['username']) ?>
-        — <?= htmlspecialchars($user['role_name']) ?>
+        @<?= htmlspecialchars($user['username']) ?>
+        &middot; <?= htmlspecialchars($role_text) ?>
         <?php if ($user['program_name']): ?> (<?= htmlspecialchars($user['program_name']) ?>)<?php endif; ?>
     </p>
 
@@ -92,15 +124,16 @@ if (!$user) {
         <input type="text" value="<?= htmlspecialchars($user['username']) ?>" disabled>
         <small class="muted">Username cannot be changed.</small>
 
-        <label>Full Name</label>
-        <input type="text" name="full_name" maxlength="100" value="<?= htmlspecialchars($user['full_name'] ?? '') ?>" required>
+        <label for="full_name">Full Name</label>
+        <input type="text" name="full_name" id="full_name" maxlength="100" value="<?= htmlspecialchars($user['full_name'] ?? '') ?>" required>
 
-        <label>Email</label>
-        <input type="email" name="email" value="<?= htmlspecialchars($user['email']) ?>" required>
+        <label for="email">Email</label>
+        <input type="email" name="email" id="email" value="<?= htmlspecialchars($user['email']) ?>" required>
 
-        <label>New Password</label>
-        <input type="password" name="new_password" placeholder="Leave blank to keep current password">
-        <small class="muted">Only fill this in if you want to reset the password.</small>
+        <label for="new_password">New Password</label>
+        <input type="password" name="new_password" id="new_password" minlength="8" autocomplete="new-password"
+               placeholder="Leave blank to keep current password">
+        <small class="muted">Only fill this in to reset the password (at least 8 characters). Tell the user their new password in person.</small>
 
         <button type="submit">Save Changes</button>
     </form>

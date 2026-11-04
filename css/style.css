@@ -1031,3 +1031,10 @@ body:has(.auth-split) {
 .confirm-no  { background: #6d28d9; color: #fff; border: 0; }
 .confirm-yes { background: #fff; color: #b91c1c; border: 1px solid #fca5a5; }
 .confirm-yes:hover { background: #fee2e2; }
+
+/* ============================================
+   ADMIN: Manage Accounts
+   ============================================ */
+.tab-row { flex-wrap: wrap; }
+.manage-actions form { display: inline; margin: 0; }
+.accounts-table .btn-small { padding: 7px 12px; font-size: 13px; }
