@@ -11,15 +11,10 @@ if (isset($conn)) {
 <aside class="sidebar">
     <?= sidebar_brand('Admin Panel') ?>
     <nav class="sidebar-nav">
-        <a href="/websys/admin/dashboard.php" class="<?= $active_page === 'dashboard' ? 'active' : '' ?>">
-            <?= icon('dashboard') ?>Dashboard
-        </a>
-        <a href="/websys/admin/manage_accounts.php" class="<?= $active_page === 'accounts' ? 'active' : '' ?>">
-            <?= icon('accounts') ?>Manage Accounts<?php if ($pending_bubble): ?><span class="nav-bubble"><?= $pending_bubble ?></span><?php endif; ?>
-        </a>
-        <a href="/websys/admin/files.php" class="<?= $active_page === 'files' ? 'active' : '' ?>">
-            <?= icon('files') ?>Files
-        </a>
+        <?= nav_link('/websys/admin/dashboard.php', 'dashboard', 'Dashboard', $active_page === 'dashboard') ?>
+        <?= nav_link('/websys/admin/manage_accounts.php', 'accounts', 'Manage Accounts', $active_page === 'accounts', $pending_bubble) ?>
+        <?= nav_link('/websys/admin/files.php', 'files', 'Files', $active_page === 'files') ?>
     </nav>
     <?= sidebar_user($conn ?? null) ?>
 </aside>
+<?= sidebar_script() ?>

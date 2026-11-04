@@ -1115,3 +1115,49 @@ body:has(.auth-split) {
 @media (max-width: 1000px) {
     .qd-stats, .qd-charts { grid-template-columns: 1fr; }
 }
+
+/* ============================================
+   SIDEBAR: minimize to icons only (js/sidebar.js adds body.sb-minimized)
+   ============================================ */
+.sidebar { transition: width .2s ease; overflow: hidden; }
+.sidebar-header .brand-text { min-width: 0; flex: 1; }
+.sidebar-toggle {
+    width: 32px;
+    height: 32px;
+    margin: 0;
+    padding: 0;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    color: #ddd6fe;
+    border: none;
+    border-radius: 10px;
+}
+.sidebar-toggle:hover { background: rgba(255, 255, 255, 0.22); color: #fff; }
+.sidebar-toggle .nav-icon { transition: transform .2s ease; }
+.sidebar-nav a { position: relative; }
+.sidebar-nav .nav-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+body.sb-minimized .sidebar { width: 76px; }
+body.sb-minimized .sidebar-header { flex-direction: column; justify-content: center; gap: 12px; padding: 0 0 18px; }
+body.sb-minimized .sidebar-header .brand-text { display: none; }
+body.sb-minimized .sidebar-toggle .nav-icon { transform: rotate(180deg); }
+
+body.sb-minimized .sidebar-nav { padding: 18px 12px; }
+body.sb-minimized .sidebar-nav a { justify-content: center; gap: 0; padding: 12px 0; }
+body.sb-minimized .sidebar-nav .nav-label { display: none; }
+body.sb-minimized .sidebar-nav .nav-bubble {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    min-width: 16px;
+    margin: 0;
+    padding: 0 4px;
+    font-size: 10px;
+    line-height: 16px;
+}
+
+body.sb-minimized .sidebar-footer { flex-direction: column; justify-content: center; gap: 8px; padding: 18px 0 0; }
+body.sb-minimized .user-info { display: none; }
