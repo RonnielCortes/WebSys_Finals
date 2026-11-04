@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // PHP throws away both $_POST and $_FILES.
     if (empty($_POST) && empty($_FILES) && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
         $error = "That file is too big for the server settings (post_max_size is "
-               . ini_get('post_max_size') . "). The system allows up to 10 MB.";
+            . ini_get('post_max_size') . "). The system allows up to 10 MB.";
     } elseif (!isset($categories[$selected_category])) {
         $error = "Please choose a category.";
     } else {
@@ -147,14 +147,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // 4) tell every active QA user
                 $prefix = $is_resubmit ? "Re-submitted file from "
-                        : ($old ? "Replaced file from " : "New file from ");
+                    : ($old ? "Replaced file from " : "New file from ");
                 notify_active_qa($conn, $new_id, $prefix . $program_name . ": " . display_name($path));
 
                 $conn->commit();
 
                 header("Location: dashboard.php?flash=" . ($is_resubmit ? 'resubmitted' : ($old ? 'replaced' : 'uploaded')));
                 exit();
-
             } catch (Throwable $e) {
                 $conn->rollback();
                 $shown = ($e instanceof RuntimeException);
@@ -173,61 +172,68 @@ $page_title = $is_resubmit ? 'Re-submit File' : ($old ? 'Replace File' : 'Upload
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<title><?= $page_title ?></title>
-<link rel="stylesheet" href="../css/style.css?v=<?= @filemtime(__DIR__ . '/../css/style.css') ?>">
+    <meta charset="UTF-8">
+    <title><?= $page_title ?></title>
+    <link rel="stylesheet" href="../css/style.css?v=<?= @filemtime(__DIR__ . '/../css/style.css') ?>">
+    <link rel="stylesheet" href="../css/upload.css?v=<?= @filemtime(__DIR__ . '/../css/upload.css') ?>">
 </head>
+
 <body class="with-sidebar">
 
-<?php include __DIR__ . '/../includes/program_sidebar.php'; ?>
+    <?php include __DIR__ . '/../includes/program_sidebar.php'; ?>
 
-<main class="main-content">
-    <h2><?= $page_title ?></h2>
-    <p class="muted">
-        Sending as <strong><?= htmlspecialchars($program_name) ?></strong>
-        &middot; PDF, DOCX or XLSX &middot; up to 10 MB
-    </p>
-
-    <?php if ($old): ?>
-        <div class="alert alert-info">
-            You are replacing <strong><?= htmlspecialchars(display_name($old['file_path'])) ?></strong>.
-            The old version is kept in your archive, not erased.
+    <main class="main-content upload-page">
+        <div class="upload-wrap">
+            <h2><?= $page_title ?></h2>
         </div>
-    <?php endif; ?>
+        <p class="muted">
+            Sending as <strong><?= htmlspecialchars($program_name) ?></strong>
+        </p>
 
-    <?php if ($error): ?>
-        <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
-    <?php endif; ?>
-
-    <form method="POST" action="upload.php<?= $old ? '?replace=' . (int)$old['file_id'] : '' ?>"
-          enctype="multipart/form-data" class="edit-form">
         <?php if ($old): ?>
-            <input type="hidden" name="replace" value="<?= (int)$old['file_id'] ?>">
+            <div class="alert alert-info">
+                You are replacing <strong><?= htmlspecialchars(display_name($old['file_path'])) ?></strong>.
+                The old version is kept in your archive, not erased.
+            </div>
         <?php endif; ?>
 
-        <label for="category_id">Category</label>
-        <select name="category_id" id="category_id" required>
-            <option value="">-- Select a category --</option>
-            <?php foreach ($categories as $id => $name): ?>
-                <option value="<?= $id ?>" <?= $selected_category === $id ? 'selected' : '' ?>>
-                    <?= htmlspecialchars($name) ?>
-                </option>
-            <?php endforeach; ?>
-        </select>
+        <?php if ($error): ?>
+            <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
+        <?php endif; ?>
 
-        <label for="document"><?= $old ? 'New file' : 'File' ?></label>
-        <input type="file" name="document" id="document" accept=".pdf,.docx,.xlsx" required>
+        <form method="POST" action="upload.php<?= $old ? '?replace=' . (int)$old['file_id'] : '' ?>"
+            enctype="multipart/form-data" class="upload-form">
+            <?php if ($old): ?>
+                <input type="hidden" name="replace" value="<?= (int)$old['file_id'] ?>">
+            <?php endif; ?>
+            <div>
+                <label for="category_id">Category</label>
+                <select name="category_id" id="category_id" required>
+                    <option value="">-- Select a category --</option>
+                    <?php foreach ($categories as $id => $name): ?>
+                        <option value="<?= $id ?>" <?= $selected_category === $id ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($name) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
 
-        <label for="note">Note for QA (optional)</label>
-        <textarea name="note" id="note" rows="3" maxlength="500"
-                  placeholder="<?= $is_resubmit ? 'What did you fix?' : ($old ? 'Why are you replacing it?' : 'Anything QA should know?') ?>"><?= htmlspecialchars($note) ?></textarea>
 
-        <button type="submit"><?= $is_resubmit ? 'Re-submit' : ($old ? 'Replace file' : 'Send to QA') ?></button>
-    </form>
+            <label for="document"><?= $old ? 'New file' : 'File' ?></label>
+            <input type="file" name="document" id="document" accept=".pdf,.docx,.xlsx" required>
 
-    <p><a href="dashboard.php">Back to My Files</a></p>
-</main>
+            <label for="note">Note for QA (optional)</label>
+            <textarea name="note" id="note" rows="3" maxlength="500"
+                placeholder="<?= $is_resubmit ? 'What did you fix?' : ($old ? 'Why are you replacing it?' : 'Anything QA should know?') ?>"><?= htmlspecialchars($note) ?></textarea>
+
+            <button type="submit"><?= $is_resubmit ? 'Re-submit' : ($old ? 'Replace file' : 'Send to QA') ?></button>
+        </form>
+
+        <p><a href="dashboard.php">Back to My Files</a></p>
+    </main>
 
 </body>
+
 </html>
