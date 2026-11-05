@@ -1,0 +1,158 @@
+/* ============================================
+   css/upload.css — Program side: Upload / Replace / Re-submit page
+   Loaded only by program/upload.php (after style.css).
+   ============================================ */
+
+/* Put the whole form in the middle of the page */
+.upload-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;                 /* lets the page shrink next to the sidebar */
+    padding: 40px 24px;
+}
+.upload-wrap {
+    width: 100%;
+    max-width: 560px;
+}
+.upload-wrap h2 {
+    margin: 0 0 6px;
+    font-size: 28px;
+    text-align: center;
+    color: #2e1065;
+}
+.upload-wrap .muted {
+    margin: 0 0 24px;
+    font-size: 14px;
+    text-align: center;
+}
+.upload-wrap .alert {
+    border-radius: 10px;
+    margin-bottom: 16px;
+}
+
+/* The white card */
+.upload-card {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    padding: 32px;
+    background: #fff;
+    border: 1px solid #eee9fb;
+    border-radius: 16px;
+    box-shadow: 0 8px 30px rgba(76, 29, 149, 0.06);
+}
+.upload-field { display: flex; flex-direction: column; gap: 8px; }
+
+/* Field labels (reset the global label spacing) */
+.upload-card label,
+.upload-card .field-label {
+    margin: 0;
+    font-size: 13px;
+    font-weight: bold;
+    color: #4c1d95;
+}
+.upload-card .optional { font-weight: normal; color: #6b5b8c; }
+
+.upload-card select,
+.upload-card textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #ddd6fe;
+    border-radius: 10px;
+    background: #fff;
+    color: #2e1065;
+    font: inherit;
+    font-size: 14px;
+}
+.upload-card select { min-height: 46px; padding: 0 14px; }
+.upload-card textarea { padding: 12px 14px; resize: vertical; }
+.upload-card select:focus,
+.upload-card textarea:focus {
+    outline: none;
+    border-color: #7c3aed;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.18);
+}
+
+/* Drop zone: the real <input type="file"> is stretched over the whole box
+   (invisible), so clicking AND dragging a file onto it both work with no extra JS. */
+.upload-card .dropzone {
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 36px 16px;
+    text-align: center;
+    background: #faf8ff;
+    border: 2px dashed #cbbdf5;
+    border-radius: 14px;
+    font-weight: normal;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+}
+.dropzone:hover,
+.dropzone.dragging { background: #f3eefe; border-color: #8b5cf6; }
+.dropzone:focus-within { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.18); }
+.dropzone .nav-icon { width: 30px; height: 30px; stroke: #6d28d9; }
+.dropzone-title {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    font-size: 15px;
+    font-weight: bold;
+    color: #2e1065;
+}
+.dropzone-hint { font-size: 13px; color: #6b5b8c; }
+
+.upload-card .dropzone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+/* A file was picked */
+.dropzone.has-file { background: #f3eefe; border-style: solid; border-color: #8b5cf6; }
+/* Picked file is over 10 MB */
+.dropzone.too-big { background: #fef2f2; border-color: #dc2626; }
+.dropzone.too-big .nav-icon { stroke: #dc2626; }
+.dropzone.too-big .dropzone-hint { color: #991b1b; }
+
+/* Cancel + Send */
+.upload-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 20px;
+}
+.upload-cancel {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-size: 14px;
+    color: #6b5b8c;
+}
+.upload-cancel:hover { color: #2e1065; }
+.upload-card .upload-submit {
+    width: auto;
+    min-height: 46px;
+    margin: 0;
+    padding: 0 30px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: bold;
+    background: #6d28d9;
+}
+.upload-card .upload-submit:hover { background: #5b21b6; }
+
+@media (max-width: 560px) {
+    .upload-page { padding: 24px 16px; }
+    .upload-card { padding: 22px 18px; }
+}

@@ -219,3 +219,11 @@ function notify_active_qa($conn, $file_id, $message) {
     }
     $stmt->close();
 }
+
+// The optional note a Program user typed when sending a file.
+// It is saved in file_logs.remarks (action 'sent' or 'resubmitted'). When a file was
+// replaced, the log starts with "Replaces file #12." -- that part is removed here.
+function program_note($remarks) {
+    $note = preg_replace('/^Replaces file #\d+\.?\s*/', '', trim((string)$remarks));
+    return trim($note);
+}

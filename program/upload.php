@@ -186,54 +186,65 @@ $page_title = $is_resubmit ? 'Re-submit File' : ($old ? 'Replace File' : 'Upload
 
     <main class="main-content upload-page">
         <div class="upload-wrap">
+
             <h2><?= $page_title ?></h2>
-        </div>
-        <p class="muted">
-            Sending as <strong><?= htmlspecialchars($program_name) ?></strong>
-        </p>
+            <p class="muted">Sending as <strong><?= htmlspecialchars($program_name) ?></strong></p>
 
-        <?php if ($old): ?>
-            <div class="alert alert-info">
-                You are replacing <strong><?= htmlspecialchars(display_name($old['file_path'])) ?></strong>.
-                The old version is kept in your archive, not erased.
-            </div>
-        <?php endif; ?>
-
-        <?php if ($error): ?>
-            <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
-        <?php endif; ?>
-
-        <form method="POST" action="upload.php<?= $old ? '?replace=' . (int)$old['file_id'] : '' ?>"
-            enctype="multipart/form-data" class="upload-form">
             <?php if ($old): ?>
-                <input type="hidden" name="replace" value="<?= (int)$old['file_id'] ?>">
+                <div class="alert alert-info">
+                    You are replacing <strong><?= htmlspecialchars(display_name($old['file_path'])) ?></strong>.
+                    The old version is kept in your archive, not erased.
+                </div>
             <?php endif; ?>
-            <div>
-                <label for="category_id">Category</label>
-                <select name="category_id" id="category_id" required>
-                    <option value="">-- Select a category --</option>
-                    <?php foreach ($categories as $id => $name): ?>
-                        <option value="<?= $id ?>" <?= $selected_category === $id ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($name) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
 
+            <?php if ($error): ?>
+                <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
+            <?php endif; ?>
 
-            <label for="document"><?= $old ? 'New file' : 'File' ?></label>
-            <input type="file" name="document" id="document" accept=".pdf,.docx,.xlsx" required>
+            <form method="POST" action="upload.php<?= $old ? '?replace=' . (int)$old['file_id'] : '' ?>"
+                enctype="multipart/form-data" class="upload-card">
+                <?php if ($old): ?>
+                    <input type="hidden" name="replace" value="<?= (int)$old['file_id'] ?>">
+                <?php endif; ?>
 
-            <label for="note">Note for QA (optional)</label>
-            <textarea name="note" id="note" rows="3" maxlength="500"
-                placeholder="<?= $is_resubmit ? 'What did you fix?' : ($old ? 'Why are you replacing it?' : 'Anything QA should know?') ?>"><?= htmlspecialchars($note) ?></textarea>
+                <div class="upload-field">
+                    <label for="category_id">Category</label>
+                    <select name="category_id" id="category_id" required>
+                        <option value="">Select a category</option>
+                        <?php foreach ($categories as $id => $name): ?>
+                            <option value="<?= $id ?>" <?= $selected_category === $id ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($name) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
 
-            <button type="submit"><?= $is_resubmit ? 'Re-submit' : ($old ? 'Replace file' : 'Send to QA') ?></button>
-        </form>
+                <div class="upload-field">
+                    <span class="field-label"><?= $old ? 'New file' : 'File' ?></span>
+                    <label for="document" class="dropzone" id="dropzone">
+                        <?= icon('upload') ?>
+                        <span class="dropzone-title" id="dropzone-title"><?= $old ? 'Choose the new file' : 'Choose a file' ?></span>
+                        <span class="dropzone-hint" id="dropzone-hint">PDF, DOCX or XLSX &middot; up to 10 MB</span>
+                        <input type="file" name="document" id="document" accept=".pdf,.docx,.xlsx" required>
+                    </label>
+                </div>
 
-        <p><a href="dashboard.php">Back to My Files</a></p>
+                <div class="upload-field">
+                    <label for="note">Note for QA <span class="optional">(optional)</span></label>
+                    <textarea name="note" id="note" rows="3" maxlength="500"
+                        placeholder="<?= $is_resubmit ? 'What did you fix?' : ($old ? 'Why are you replacing it?' : 'Anything QA should know?') ?>"><?= htmlspecialchars($note) ?></textarea>
+                </div>
+
+                <div class="upload-actions">
+                    <a href="dashboard.php" class="upload-cancel">Cancel</a>
+                    <button type="submit" class="upload-submit"><?= $is_resubmit ? 'Re-submit' : ($old ? 'Replace file' : 'Send to QA') ?></button>
+                </div>
+            </form>
+
+        </div>
     </main>
 
+    <script src="../js/upload.js?v=<?= @filemtime(__DIR__ . '/../js/upload.js') ?>"></script>
 </body>
 
 </html>

@@ -76,10 +76,20 @@ while ($r = $res->fetch_assoc()) { $categories[(int)$r['category_id']] = $r['cat
 if (!isset($categories[$sel_category])) { $sel_category = 0; }
 
 // ---------------------------------------------------------------
+// The file list is NOT shown by default. It appears only after QA opens a
+// folder (or types something in the search box).
+// ---------------------------------------------------------------
+$show_files = ($sel_program > 0 || $search !== '');
+
+// ---------------------------------------------------------------
 // Files in the selected folder (and everything under it)
 // ---------------------------------------------------------------
+$files = [];
 $sql = "SELECT f.file_id, f.file_path, f.status, f.created_at, f.program_id, f.is_archived,
-               f.category_id, c.category_name, COALESCE(u.full_name, u.username) AS sent_by
+               f.category_id, c.category_name, COALESCE(u.full_name, u.username) AS sent_by,
+               (SELECT l.remarks FROM file_logs l
+                 WHERE l.file_id = f.file_id AND l.action IN ('sent', 'resubmitted')
+                 ORDER BY l.timestamp DESC, l.log_id DESC LIMIT 1) AS program_note
         FROM files f
         JOIN users u ON f.uploaded_by = u.user_id
         LEFT JOIN file_categories c ON f.category_id = c.category_id
@@ -98,11 +108,13 @@ if ($search !== '') { $sql .= " AND f.file_path LIKE ?"; $types .= 's'; $params[
 $order = ['new' => 'f.created_at DESC', 'old' => 'f.created_at ASC', 'name' => 'f.file_path ASC'];
 $sql .= " ORDER BY " . $order[$sort] . " LIMIT 300";
 
-$stmt = $conn->prepare($sql);
-if ($params) { $stmt->bind_param($types, ...$params); }
-$stmt->execute();
-$files = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-$stmt->close();
+if ($show_files) {
+    $stmt = $conn->prepare($sql);
+    if ($params) { $stmt->bind_param($types, ...$params); }
+    $stmt->execute();
+    $files = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+}
 
 // ---------------------------------------------------------------
 // Folder cards: sub-programs if there are any, otherwise categories
@@ -115,7 +127,7 @@ if (!$sel_category) {
         foreach ($kids as $k) {
             $cards[] = ['name' => $programs[$k]['program_name'],
                         'count' => folder_count($children, $direct, $k),
-                        'url' => qurl(['program' => $k, 'category' => 0])];
+                        'url' => qurl(['program' => $k])];
         }
     } elseif ($sel_program) {
         $cards_title = 'Folders in ' . $programs[$sel_program]['program_name'] . ' · by category';
@@ -149,18 +161,6 @@ function file_kind($path) {
     return ['oth', strtoupper(substr($ext, 0, 3))];
 }
 
-// Sidebar tree (recursive)
-function render_tree($children, $programs, $direct, $parent, $selected, $level) {
-    foreach ($children[$parent] ?? [] as $id) {
-        $count = folder_count($children, $direct, $id);
-        $on = ($id === $selected) ? ' on' : '';
-        echo '<a class="qf-row qf-l' . min($level, 4) . $on . '" href="' . htmlspecialchars(qurl(['program' => $id, 'category' => 0])) . '">'
-           . icon('folder') . '<span>' . htmlspecialchars($programs[$id]['program_name']) . '</span>'
-           . '<em>' . $count . '</em></a>';
-        render_tree($children, $programs, $direct, $id, $selected, $level + 1);
-    }
-}
-
 $is_filtered = ($sel_category || $sel_status !== '' || $search !== '' || $show_old);
 ?>
 <!DOCTYPE html>
@@ -178,7 +178,7 @@ $is_filtered = ($sel_category || $sel_status !== '' || $search !== '' || $show_o
     <div class="page-top">
         <div>
             <h2>Files</h2>
-            <p class="muted">Every document from every program and office, organized like folders.</p>
+            <p class="muted">Open a folder to see its documents.</p>
         </div>
         <div class="top-date"><?= date('D, M d, Y') ?></div>
     </div>
@@ -189,17 +189,7 @@ $is_filtered = ($sel_category || $sel_status !== '' || $search !== '' || $show_o
         <div class="alert alert-error">Could not ping that file. It may already be handled, or the note was empty.</div>
     <?php endif; ?>
 
-    <div class="qf-layout">
-        <!-- folder tree -->
-        <aside class="dash-panel qf-tree">
-            <h3>Folders</h3>
-            <p class="dash-hint">Programs &amp; Offices</p>
-            <a class="qf-row qf-l0<?= $sel_program === 0 ? ' on' : '' ?>" href="<?= htmlspecialchars(qurl(['program' => 0, 'category' => 0])) ?>">
-                <?= icon('folder') ?><span>All files</span><em><?= $total_all ?></em>
-            </a>
-            <?php render_tree($children, $programs, $direct, 0, $sel_program, 1); ?>
-        </aside>
-
+    <div class="qf-page">
         <!-- content -->
         <section class="dash-panel qf-main">
             <div class="qf-crumb">
@@ -259,6 +249,12 @@ $is_filtered = ($sel_category || $sel_status !== '' || $search !== '' || $show_o
                 </div>
             <?php endif; ?>
 
+            <?php if (!$show_files): ?>
+                <div class="qf-pick">
+                    <?= icon('folder') ?>
+                    <p>Choose a folder above to see its files.</p>
+                </div>
+            <?php else: ?>
             <div class="qf-sec">Files <small>(<?= count($files) ?><?= count($files) === 300 ? '+' : '' ?>)</small></div>
 
             <?php if (empty($files)): ?>
@@ -275,6 +271,9 @@ $is_filtered = ($sel_category || $sel_status !== '' || $search !== '' || $show_o
                                 <b><?= htmlspecialchars(display_name($f['file_path'])) ?></b>
                                 <?php if ($f['is_archived']): ?><span class="badge badge-archived">Archived</span><?php endif; ?>
                                 <?php if (!$sel_program): ?><small class="qf-where"><?= htmlspecialchars(program_breadcrumb($programs, $f['program_id'])) ?></small><?php endif; ?>
+                                <?php $pn = program_note($f['program_note'] ?? ''); if ($pn !== ''): ?>
+                                    <div class="pnote qf-pnote"><b>Note:</b> <?= nl2br(htmlspecialchars($pn)) ?></div>
+                                <?php endif; ?>
                             </td>
                             <td><?php if ($f['category_name']): ?><span class="qf-cat"><?= htmlspecialchars($f['category_name']) ?></span><?php else: ?>—<?php endif; ?></td>
                             <td><?= htmlspecialchars($f['sent_by']) ?></td>
@@ -309,11 +308,15 @@ $is_filtered = ($sel_category || $sel_status !== '' || $search !== '' || $show_o
                             <small><?= htmlspecialchars($f['category_name'] ?? '—') ?> &middot; <?= htmlspecialchars($f['sent_by']) ?></small>
                             <span class="badge badge-status-<?= htmlspecialchars($f['status']) ?>"><?= htmlspecialchars(status_label($f['status'])) ?></span>
                             <small><?= date('M d, h:i A', strtotime($f['created_at'])) ?></small>
+                            <?php $pn = program_note($f['program_note'] ?? ''); if ($pn !== ''): ?>
+                                <small class="pnote" title="<?= htmlspecialchars($pn) ?>"><b>Note:</b> <?= htmlspecialchars(mb_strimwidth($pn, 0, 60, '…')) ?></small>
+                            <?php endif; ?>
                             <a href="../download.php?id=<?= (int)$f['file_id'] ?>" class="btn-small btn-download">Download</a>
                         </div>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
+            <?php endif; /* show_files */ ?>
         </section>
     </div>
 </main>

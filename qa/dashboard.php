@@ -81,7 +81,10 @@ $arrived_today = (int)$conn->query(
 // oldest waiting files -> notifications + longest wait
 $attention = $conn->query(
     "SELECT f.file_id, f.file_path, f.created_at, p.program_name, c.category_name,
-            COALESCE(u.full_name, u.username) AS sent_by
+            COALESCE(u.full_name, u.username) AS sent_by,
+            (SELECT l.remarks FROM file_logs l
+             WHERE l.file_id = f.file_id AND l.action IN ('sent', 'resubmitted')
+             ORDER BY l.timestamp DESC, l.log_id DESC LIMIT 1) AS program_note
      FROM files f
      JOIN programs p ON f.program_id = p.program_id
      JOIN users u ON f.uploaded_by = u.user_id
@@ -143,7 +146,10 @@ $sql = "SELECT f.file_id, f.file_path, f.status, f.created_at, f.program_id,
                COALESCE(u.full_name, u.username) AS sent_by,
                (SELECT l.remarks FROM file_logs l
                  WHERE l.file_id = f.file_id AND l.action = 'flagged_for_revision'
-                 ORDER BY l.timestamp DESC, l.log_id DESC LIMIT 1) AS qa_remark
+                 ORDER BY l.timestamp DESC, l.log_id DESC LIMIT 1) AS qa_remark,
+               (SELECT l.remarks FROM file_logs l
+                 WHERE l.file_id = f.file_id AND l.action IN ('sent', 'resubmitted')
+                 ORDER BY l.timestamp DESC, l.log_id DESC LIMIT 1) AS program_note
         FROM files f
         JOIN users u ON f.uploaded_by = u.user_id
         JOIN programs p ON f.program_id = p.program_id
@@ -221,6 +227,9 @@ $programs = load_programs($conn);
                 <div class="qd-note-text">
                     <b><?= $d >= 1 ? 'Waiting for ' . qd_days_text($d) . ': ' : 'New file from ' ?><?= qd_h($a['program_name']) ?></b>
                     <span><?= qd_h(display_name($a['file_path'])) ?> &middot; <?= qd_h($a['category_name'] ?? 'No category') ?> &middot; sent by <?= qd_h($a['sent_by']) ?> &middot; <?= date('M d, h:i A', strtotime($a['created_at'])) ?></span>
+                    <?php $pn = program_note($a['program_note'] ?? ''); if ($pn !== ''): ?>
+                        <div class="pnote"><b>Note:</b> <?= nl2br(qd_h($pn)) ?></div>
+                    <?php endif; ?>
                 </div>
                 <a class="qd-btn" href="../download.php?id=<?= (int)$a['file_id'] ?>">Open file</a>
             </div>
@@ -334,7 +343,10 @@ $programs = load_programs($conn);
                     ?>
                     <tr>
                         <td><strong><?= qd_h(display_name($f['file_path'])) ?></strong>
-                            <small><?= date('M d, Y h:i A', strtotime($f['created_at'])) ?></small></td>
+                            <small><?= date('M d, Y h:i A', strtotime($f['created_at'])) ?></small>
+                            <?php $pn = program_note($f['program_note'] ?? ''); if ($pn !== ''): ?>
+                                <div class="pnote"><b>Note from <?= qd_h($f['program_name']) ?>:</b> <?= nl2br(qd_h($pn)) ?></div>
+                            <?php endif; ?></td>
                         <td><?= qd_h($f['program_name']) ?><?= $parent ? '<small>' . qd_h($parent) . '</small>' : '' ?></td>
                         <td><?= qd_h($f['category_name'] ?? '—') ?></td>
                         <td><?= qd_h($f['sent_by']) ?></td>
