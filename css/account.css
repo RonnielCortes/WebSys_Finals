@@ -1,0 +1,46 @@
+/* ============================================
+   css/account.css — My Profile page (account/my_profile.php)
+   Loaded after style.css.
+   ============================================ */
+.acct-wrap { max-width: 720px; }
+.acct-wrap .alert { margin-top: 14px; border-radius: 10px; }
+.acct-card { margin-top: 18px; }
+.acct-card h3 { margin: 0 0 4px; }
+
+/* the "who you are" card */
+.acct-me { display: flex; align-items: center; gap: 20px; }
+.acct-avatar {
+    width: 84px; height: 84px; border-radius: 50%; flex-shrink: 0; overflow: hidden;
+    background: #c4b5fd; color: #2e1065; font-size: 28px; font-weight: bold;
+    display: flex; align-items: center; justify-content: center;
+}
+.acct-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.acct-me-info h3 { margin: 0 0 4px; font-size: 20px; }
+.acct-me-info p { margin: 0 0 2px; font-size: 14px; color: #4c1d95; }
+.acct-me-info p.muted { color: #8b7bb5; font-size: 13px; }
+
+/* forms */
+.acct-form { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.acct-form label { margin: 8px 0 0; font-size: 13px; font-weight: bold; color: #4c1d95; }
+.acct-form input { width: 100%; box-sizing: border-box; }
+.acct-form input:disabled { background: #f5f3ff; color: #8b7bb5; cursor: not-allowed; }
+.acct-actions { margin-top: 16px; }
+
+.acct-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; }
+.acct-row input[type="file"] { flex: 1; min-width: 200px; width: auto; }
+.acct-inline { margin-top: 10px; }
+
+.acct-btn {
+    width: auto; margin: 0; padding: 10px 24px; border-radius: 999px;
+    font-size: 14px; font-weight: bold; background: #6d28d9;
+}
+.acct-btn:hover { background: #5b21b6; }
+.acct-link {
+    width: auto; margin: 0; padding: 0; background: none; border: 0;
+    color: #b91c1c; font-size: 13px; cursor: pointer; text-decoration: underline;
+}
+.acct-link:hover { background: none; color: #7f1d1d; }
+
+@media (max-width: 560px) {
+    .acct-me { flex-direction: column; text-align: center; }
+}

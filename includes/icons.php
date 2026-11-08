@@ -4,7 +4,8 @@
 // ============================================
 
 // Inline SVG icons (stroke = currentColor, so they follow the text color)
-function icon($name) {
+function icon($name)
+{
     $paths = [
         'dashboard'     => '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
         'accounts'      => '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>',
@@ -20,7 +21,8 @@ function icon($name) {
 }
 
 // "Niel" -> full name if we have it, otherwise the username
-function session_display_name($conn = null) {
+function session_display_name($conn = null)
+{
     if (!empty($_SESSION['full_name'])) {
         return $_SESSION['full_name'];
     }
@@ -40,46 +42,85 @@ function session_display_name($conn = null) {
     return $_SESSION['username'] ?? 'User';
 }
 
-function name_initials($name) {
+function name_initials($name)
+{
     $parts = preg_split('/\s+/', trim($name));
     $i = strtoupper(mb_substr($parts[0] ?? '?', 0, 1));
-    if (count($parts) > 1) { $i .= strtoupper(mb_substr(end($parts), 0, 1)); }
+    if (count($parts) > 1) {
+        $i .= strtoupper(mb_substr(end($parts), 0, 1));
+    }
     return $i;
 }
 
 // Brand block at the top of every sidebar (logo + name + the button that minimizes the sidebar)
-function sidebar_brand($subtitle) {
+function sidebar_brand($subtitle)
+{
     return '<div class="sidebar-header"><div class="brand-logo">QA</div>'
-         . '<div class="brand-text"><b>QADMS</b><small>' . htmlspecialchars($subtitle) . '</small></div>'
-         . '<button type="button" class="sidebar-toggle" aria-label="Minimize sidebar" title="Minimize / expand menu">'
-         . icon('collapse') . '</button></div>';
+        . '<div class="brand-text"><b>QADMS</b><small>' . htmlspecialchars($subtitle) . '</small></div>'
+        . '<button type="button" class="sidebar-toggle" aria-label="Minimize sidebar" title="Minimize / expand menu">'
+        . icon('collapse') . '</button></div>';
 }
 
 // One link in the sidebar menu. The text sits in .nav-label so it can be hidden
 // when the sidebar is minimized (only the icon is left; the title shows on hover).
-function nav_link($href, $icon_name, $label, $is_active, $bubble = 0) {
+function nav_link($href, $icon_name, $label, $is_active, $bubble = 0)
+{
     return '<a href="' . htmlspecialchars($href) . '" class="' . ($is_active ? 'active' : '') . '"'
-         . ' title="' . htmlspecialchars($label) . '">'
-         . icon($icon_name) . '<span class="nav-label">' . htmlspecialchars($label) . '</span>'
-         . ($bubble ? '<span class="nav-bubble">' . (int)$bubble . '</span>' : '')
-         . '</a>';
+        . ' title="' . htmlspecialchars($label) . '">'
+        . icon($icon_name) . '<span class="nav-label">' . htmlspecialchars($label) . '</span>'
+        . ($bubble ? '<span class="nav-bubble">' . (int)$bubble . '</span>' : '')
+        . '</a>';
 }
 
 // Loads js/sidebar.js (minimize/expand + remembers the choice). Put it right after </aside>.
-function sidebar_script() {
+function sidebar_script()
+{
     $v = @filemtime(dirname(__DIR__) . '/js/sidebar.js');
     return '<script src="/websys/js/sidebar.js?v=' . (int)$v . '"></script>';
 }
 
-// User block at the bottom of every sidebar (avatar + name + role + logout)
-function sidebar_user($conn = null) {
+// ============================================================
+// In includes/icons.php: REPLACE the whole  function sidebar_user($conn = null) { ... }
+// with the two functions below.
+// ============================================================
+
+// The logged-in user's profile picture path ('' = none). Cached in the session.
+function session_profile_picture($conn = null)
+{
+    if (array_key_exists('profile_picture', $_SESSION)) {
+        return (string)$_SESSION['profile_picture'];
+    }
+    $pic = '';
+    if ($conn && !empty($_SESSION['user_id'])) {
+        $stmt = $conn->prepare("SELECT profile_picture FROM users WHERE user_id = ?");
+        $uid = (int)$_SESSION['user_id'];
+        $stmt->bind_param("i", $uid);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        $pic = (string)($row['profile_picture'] ?? '');
+    }
+    $_SESSION['profile_picture'] = $pic;
+    return $pic;
+}
+
+// User block at the bottom of every sidebar (avatar + name + role + logout).
+// The avatar and name open "My Profile".
+function sidebar_user($conn = null)
+{
     $name = session_display_name($conn);
+    $pic  = session_profile_picture($conn);
     $role = $_SESSION['role_name'] ?? '';
     $roles = ['admin' => 'Administrator', 'qa' => 'Quality Assurance', 'program' => 'Program / Office'];
+    $avatar = $pic
+        ? '<img src="/websys/' . htmlspecialchars($pic) . '" alt="">'
+        : htmlspecialchars(name_initials($name));
     return '<div class="sidebar-footer">'
-         . '<div class="user-avatar">' . htmlspecialchars(name_initials($name)) . '</div>'
-         . '<div class="user-info"><b>' . htmlspecialchars($name) . '</b>'
-         . '<small>' . htmlspecialchars($roles[$role] ?? ucfirst($role)) . '</small></div>'
-         . '<a href="/websys/logout.php" class="logout-btn" title="Logout" aria-label="Logout">' . icon('logout') . '</a>'
-         . '</div>';
+        . '<a href="/websys/account/my_profile.php" class="user-link" title="My Profile">'
+        . '<div class="user-avatar">' . $avatar . '</div>'
+        . '<div class="user-info"><b>' . htmlspecialchars($name) . '</b>'
+        . '<small>' . htmlspecialchars($roles[$role] ?? ucfirst($role)) . '</small></div>'
+        . '</a>'
+        . '<a href="/websys/logout.php" class="logout-btn" title="Logout" aria-label="Logout">' . icon('logout') . '</a>'
+        . '</div>';
 }

@@ -215,7 +215,7 @@ function program_can_replace($status)
 // Once it is under_review / approved / rejected it is locked.
 function program_can_delete($status)
 {
-    return in_array($status, ['sent', 'received', 'need_revision'], true);
+    return in_array($status, ['sent', 'received', 'needs_revision'], true);
 }
 
 // Sends one notification to every active, approved QA user.
