@@ -56,3 +56,13 @@
     .account-page { padding: 24px 16px; }
     .acct-me { flex-direction: column; text-align: center; }
 }
+
+/* Cancel + Save row (used by admin/edit_account.php) */
+.acct-form select {
+    width: 100%; box-sizing: border-box; min-height: 42px; padding: 0 12px;
+    border: 1px solid #ddd6fe; border-radius: 10px; background: #fff; color: #2e1065; font: inherit;
+}
+.acct-form small.muted { margin-top: 2px; font-size: 12px; }
+.acct-actions-split { display: flex; align-items: center; justify-content: flex-end; gap: 20px; }
+.acct-cancel { font-size: 14px; color: #6b5b8c; }
+.acct-cancel:hover { color: #2e1065; }
