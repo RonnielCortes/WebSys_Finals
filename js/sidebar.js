@@ -33,3 +33,43 @@
         });
     }
 })();
+
+(function(){
+    var link = document.querySelector('.logout-btn');
+    if (!link) return; 
+
+    link.addEventListener('click', function(e){
+        e.preventDefault();
+        var href = link.getAttribute('href');
+
+        var overlay = document.createElement('div');
+        overlay.className = 'confirm-overlay';
+        overlay.innerHTML = '<div class = "confirm-box" role="dialog" aria-model="true" aria-labelledby="logout-title">'+
+        '<h3 id="logout-title">Log out?</h3>'+
+        '<p>Are you sure you want to logout?</p>' + 
+        '<div class="confirm-buttons">' + 
+        '<button type="button" class="confirm-no">No</button>'+ 
+        '<button type="button" class="confirm-yes">Yes</button>' +
+        '</div></div>';
+
+        function close(){
+            document.removeEventListener('keydown', onKey);
+            overlay.remove();
+        }
+
+        function onKey(ev){
+            if(ev.key ==='Escape') close();
+        }
+
+        overlay.querySelector('.confirm-no').addEventListener('click', close);
+        overlay.querySelector('.confirm-yes').addEventListener('click', function(){
+            window.location.href=href;
+        });
+        overlay.addEventListener('click', function(ev){
+            if(ev.target === overlay) close();
+        });
+        document.addEventListener('keydown', onKey);
+        document.body.appendChild(overlay);
+        overlay.querySelector('.confirm-no').focus();
+    })
+})();
