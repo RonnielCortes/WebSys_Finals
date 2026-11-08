@@ -264,7 +264,7 @@ $is_filtered = ($sel_category || $sel_status !== '' || $search !== '' || $show_o
                 <table class="dash-table qf-table">
                     <thead><tr><th>Name</th><th>Category</th><th>Sent by</th><th>Status</th><th>Date</th><th></th></tr></thead>
                     <tbody>
-                    <?php foreach ($files as $f): [$kc, $kt] = file_kind($f['file_path']); $can_ping = in_array($f['status'], ['sent','received','under_review'], true) && !$f['is_archived']; ?>
+                    <?php foreach ($files as $f): [$kc, $kt] = file_kind($f['file_path']); $can_ping = in_array($f['status'], ['sent','received','under_review','approved'], true) && !$f['is_archived']; ?>
                         <tr>
                             <td>
                                 <span class="qf-ficon qf-<?= $kc ?>"><?= htmlspecialchars($kt) ?></span>

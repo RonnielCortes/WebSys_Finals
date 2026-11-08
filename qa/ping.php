@@ -34,7 +34,7 @@ try {
     // Only a current (non-archived) file that is still waiting for QA can be pinged
     $stmt = $conn->prepare(
         "UPDATE files SET status = 'needs_revision'
-         WHERE file_id = ? AND is_archived = 0 AND status IN ('sent','received','under_review')"
+         WHERE file_id = ? AND is_archived = 0 AND status IN ('sent','received','under_review','approved')"
     );
     $stmt->bind_param("i", $file_id);
     $stmt->execute();
