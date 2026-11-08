@@ -2,7 +2,18 @@
    css/account.css — My Profile page (account/my_profile.php)
    Loaded after style.css.
    ============================================ */
-.acct-wrap { max-width: 720px; }
+/* Put the whole page in the middle (same as the upload page) */
+.account-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;                 /* lets the page shrink next to the sidebar */
+    padding: 40px 24px;
+}
+.acct-wrap { width: 100%; max-width: 620px; }
+.acct-title { text-align: center; }
+.acct-title h2 { margin: 0 0 6px; font-size: 28px; color: #2e1065; }
+.acct-title .muted { margin: 0 0 8px; font-size: 14px; }
 .acct-wrap .alert { margin-top: 14px; border-radius: 10px; }
 .acct-card { margin-top: 18px; }
 .acct-card h3 { margin: 0 0 4px; }
@@ -42,5 +53,6 @@
 .acct-link:hover { background: none; color: #7f1d1d; }
 
 @media (max-width: 560px) {
+    .account-page { padding: 24px 16px; }
     .acct-me { flex-direction: column; text-align: center; }
 }
