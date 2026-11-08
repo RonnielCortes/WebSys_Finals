@@ -200,7 +200,7 @@ function program_can_replace($status) {
 // Program may withdraw (delete) a file only while QA has not started on it.
 // Once it is under_review / approved / rejected it is locked.
 function program_can_delete($status) {
-    return in_array($status, ['sent', 'received'], true);
+    return in_array($status, ['sent', 'received','need_revision'], true);
 }
 
 // Sends one notification to every active, approved QA user.
