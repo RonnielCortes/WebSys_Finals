@@ -232,7 +232,7 @@ $flash_text = [
         <div class="acct-wrap">
 
             <div class="acct-title">
-                <h2>My Profile</h2>
+                <h2>Profile Setup</h2>
                 <p class="muted">Manage your name, picture and password.</p>
             </div>
 
@@ -240,8 +240,8 @@ $flash_text = [
                 <div class="alert alert-success"><?= htmlspecialchars($flash_text[$flash]) ?></div>
             <?php endif; ?>
 
-            <!-- who you are -->
-            <section class="dash-panel acct-card acct-me">
+            <!-- profile header: picture, name, email -->
+            <section class="dash-panel acct-card acct-hero">
                 <div class="acct-avatar">
                     <?php if ($pic_url): ?>
                         <img src="<?= htmlspecialchars($pic_url) ?>" alt="Your profile picture">
@@ -249,31 +249,35 @@ $flash_text = [
                         <span><?= htmlspecialchars(name_initials($display)) ?></span>
                     <?php endif; ?>
                 </div>
-                <div class="acct-me-info">
-                    <h3><?= htmlspecialchars($display) ?></h3>
-                    <p><?= htmlspecialchars($role_labels[$role] ?? ucfirst($role)) ?><?= $program_name ? ' &middot; ' . htmlspecialchars($program_name) : '' ?></p>
-                    <p class="muted">@<?= htmlspecialchars($user['username']) ?> &middot; Member since <?= date('M d, Y', strtotime($user['created_at'])) ?></p>
-                </div>
-            </section>
 
-            <!-- profile picture -->
-            <section class="dash-panel acct-card">
-                <h3>Profile picture</h3>
-                <p class="dash-hint">JPG, PNG or WEBP, up to 2 MB.</p>
-                <?php if ($errors['picture']): ?><div class="alert alert-error"><?= htmlspecialchars($errors['picture']) ?></div><?php endif; ?>
-                <form method="POST" enctype="multipart/form-data" class="acct-row">
-                    <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
-                    <input type="hidden" name="action" value="upload_picture">
-                    <input type="file" name="picture" accept="image/jpeg,image/png,image/webp" required>
-                    <button type="submit" class="acct-btn">Upload</button>
-                </form>
-                <?php if ($pic_url): ?>
-                    <form method="POST" class="acct-inline">
+                <?php if ($errors['picture']): ?><div class="alert alert-error acct-hero-alert"><?= htmlspecialchars($errors['picture']) ?></div><?php endif; ?>
+
+                <div class="acct-photo-actions">
+                    <form method="POST" enctype="multipart/form-data" id="photo-form">
                         <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
-                        <input type="hidden" name="action" value="remove_picture">
-                        <button type="submit" class="acct-link">Remove my picture</button>
+                        <input type="hidden" name="action" value="upload_picture">
+                        <input type="file" name="picture" id="picture" class="sr-only" accept="image/jpeg,image/png,image/webp" required>
+                        <label for="picture" class="acct-outline">Change photo</label>
+                        <noscript><button type="submit" class="acct-outline">Upload</button></noscript>
                     </form>
-                <?php endif; ?>
+                    <?php if ($pic_url): ?>
+                        <form method="POST">
+                            <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
+                            <input type="hidden" name="action" value="remove_picture">
+                            <button type="submit" class="acct-outline">Remove</button>
+                        </form>
+                    <?php endif; ?>
+                </div>
+                <p class="acct-photo-hint">JPG, PNG or WEBP, up to 2 MB.</p>
+
+                <h3 class="acct-name"><?= htmlspecialchars($display) ?></h3>
+                <p class="acct-email"><?= htmlspecialchars($user['email'] ?? '') ?></p>
+                <div class="acct-chips">
+                    <span class="acct-chip"><?= htmlspecialchars($role_labels[$role] ?? ucfirst($role)) ?></span>
+                    <?php if ($program_name): ?><span class="acct-chip"><?= htmlspecialchars($program_name) ?></span><?php endif; ?>
+                    <span class="acct-chip good">Active</span>
+                </div>
+                <p class="acct-since">@<?= htmlspecialchars($user['username']) ?> &middot; Member since <?= date('M d, Y', strtotime($user['created_at'])) ?></p>
             </section>
 
             <!-- name + email -->
@@ -323,6 +327,7 @@ $flash_text = [
         </div>
     </main>
 
+    <script src="../js/profile.js?v=<?= @filemtime(__DIR__ . '/../js/profile.js') ?>"></script>
 </body>
 
 </html>

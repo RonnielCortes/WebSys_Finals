@@ -18,18 +18,6 @@
 .acct-card { margin-top: 18px; }
 .acct-card h3 { margin: 0 0 4px; }
 
-/* the "who you are" card */
-.acct-me { display: flex; align-items: center; gap: 20px; }
-.acct-avatar {
-    width: 84px; height: 84px; border-radius: 50%; flex-shrink: 0; overflow: hidden;
-    background: #c4b5fd; color: #2e1065; font-size: 28px; font-weight: bold;
-    display: flex; align-items: center; justify-content: center;
-}
-.acct-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.acct-me-info h3 { margin: 0 0 4px; font-size: 20px; }
-.acct-me-info p { margin: 0 0 2px; font-size: 14px; color: #4c1d95; }
-.acct-me-info p.muted { color: #8b7bb5; font-size: 13px; }
-
 /* forms */
 .acct-form { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
 .acct-form label { margin: 8px 0 0; font-size: 13px; font-weight: bold; color: #4c1d95; }
@@ -54,7 +42,6 @@
 
 @media (max-width: 560px) {
     .account-page { padding: 24px 16px; }
-    .acct-me { flex-direction: column; text-align: center; }
 }
 
 /* Cancel + Save row (used by admin/edit_account.php) */
@@ -66,3 +53,36 @@
 .acct-actions-split { display: flex; align-items: center; justify-content: flex-end; gap: 20px; }
 .acct-cancel { font-size: 14px; color: #6b5b8c; }
 .acct-cancel:hover { color: #2e1065; }
+
+/* ---- profile header (picture, buttons, name, email) ---- */
+.acct-hero { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 32px 22px; }
+.acct-avatar {
+    width: 132px; height: 132px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+    background: #c4b5fd; color: #2e1065; font-size: 44px; font-weight: bold;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 22px rgba(76, 29, 149, 0.18);
+}
+.acct-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.acct-hero-alert { width: 100%; box-sizing: border-box; margin-top: 16px; text-align: left; }
+
+.acct-photo-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 20px; }
+.acct-photo-actions form { margin: 0; }
+.acct-outline {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: auto; margin: 0; padding: 0 26px; min-height: 42px; box-sizing: border-box;
+    border: 1px solid #cfc3ee; border-radius: 10px; background: #fff; color: #2e1065;
+    font: inherit; font-size: 13px; font-weight: bold; letter-spacing: .08em; text-transform: uppercase;
+    cursor: pointer; transition: background .15s, border-color .15s;
+}
+.acct-outline:hover { background: #f5f3ff; border-color: #8b5cf6; }
+.acct-photo-hint { margin: 10px 0 0; font-size: 12px; color: #8b7bb5; }
+
+.acct-hero .acct-name { margin: 22px 0 4px; font-size: 22px; color: #2e1065; }
+.acct-email { margin: 0 0 14px; font-size: 15px; color: #5f5776; }
+.acct-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.acct-chip { padding: 5px 14px; border-radius: 999px; background: #ede9fe; color: #4c1d95; font-size: 13px; font-weight: bold; }
+.acct-chip.good { background: #dcfce7; color: #166534; }
+.acct-since { margin: 14px 0 0; font-size: 12px; color: #8b7bb5; }
+
+/* the real file input is hidden; the "Change photo" label opens it */
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; opacity: 0; }
