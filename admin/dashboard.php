@@ -143,7 +143,7 @@ function initials($name) {
     <div class="page-top">
         <div>
             <h2>Admin Dashboard</h2>
-            <p class="muted">Welcome back, <?= htmlspecialchars(session_display_name($conn)) ?></p>
+           <p class="muted">Welcome back, <strong class="welcome-name"><?= htmlspecialchars(session_display_name($conn)) ?></strong></p>
         </div>
         <div class="top-date"><?= date('D, M d, Y') ?></div>
     </div>

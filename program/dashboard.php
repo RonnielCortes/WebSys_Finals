@@ -105,7 +105,7 @@ $is_filtered = ($filter_status !== '' || $search !== '' || $show_archived);
     <div class="page-top">
         <div>
             <h2>My Files</h2>
-            <p class="muted"><?= htmlspecialchars($program_name) ?> &middot; welcome, <?= htmlspecialchars(session_display_name($conn)) ?>!</p>
+           <p class="muted"><?= htmlspecialchars($program_name) ?> &middot; welcome, <strong class="welcome-name"><?= htmlspecialchars(session_display_name($conn)) ?></strong>!</p>
         </div>
         <div class="top-date"><?= date('D, M d, Y') ?></div>
     </div>

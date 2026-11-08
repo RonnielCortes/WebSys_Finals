@@ -381,7 +381,7 @@ body.with-sidebar {
 
 .muted {
     color: #6b6280;
-    font-size: 13px;
+    font-size: 15px;
 }
 
 /* ============================================
@@ -1267,4 +1267,13 @@ input.has-error { border-color: #dc2626 !important; }
 
 @media (max-width: 560px) {
     .nd-list li { padding: 12px 14px; }
+}
+
+.welcome-name{
+    font-weight: 100, bold;
+    background: linear-gradient(90deg, #6d28d9, #c026d3);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-size: large;
 }
