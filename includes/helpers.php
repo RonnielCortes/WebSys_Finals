@@ -9,7 +9,8 @@
  * (timestamp prefix so two uploads never overwrite each other),
  * so we strip that prefix when displaying or downloading.
  */
-function display_name($file_path) {
+function display_name($file_path)
+{
     $name = basename($file_path);
     return preg_replace('/^\d{8}_\d{6}_/', '', $name);
 }
@@ -18,7 +19,8 @@ function display_name($file_path) {
  * Loads every program/office into an array keyed by program_id,
  * so breadcrumbs can be built without extra queries.
  */
-function load_programs($conn) {
+function load_programs($conn)
+{
     $programs = [];
     $result = $conn->query("SELECT program_id, program_name, parent_id, level FROM programs");
     while ($row = $result->fetch_assoc()) {
@@ -30,7 +32,8 @@ function load_programs($conn) {
 /**
  * Builds "College > CASE-IT > BSIT" by walking up parent_id.
  */
-function program_breadcrumb($programs, $program_id) {
+function program_breadcrumb($programs, $program_id)
+{
     $parts = [];
     $seen = [];
     $current = (int)$program_id;
@@ -49,7 +52,8 @@ function program_breadcrumb($programs, $program_id) {
  *   admin, qa -> every file
  *   program   -> only their own program's files
  */
-function can_access_file($file_program_id) {
+function can_access_file($file_program_id)
+{
     $role = $_SESSION['role_name'] ?? '';
 
     if ($role === 'admin' || $role === 'qa') {
@@ -65,14 +69,16 @@ function can_access_file($file_program_id) {
 /**
  * The 7 possible values of files.status, in the order of the file's journey.
  */
-function file_statuses() {
+function file_statuses()
+{
     return ['sent', 'received', 'under_review', 'needs_revision', 'approved', 'rejected', 'returned'];
 }
 
 /**
  * "under_review" -> "Under Review"
  */
-function status_label($status) {
+function status_label($status)
+{
     return ucwords(str_replace('_', ' ', $status));
 }
 
@@ -80,18 +86,21 @@ function status_label($status) {
 // Upload helpers (used by program/upload.php)
 // ============================================
 
-function upload_allowed_extensions() {
+function upload_allowed_extensions()
+{
     return ['pdf', 'docx', 'xlsx'];
 }
 
-function upload_max_bytes() {
+function upload_max_bytes()
+{
     return 10 * 1024 * 1024; // 10 MB
 }
 
 /**
  * "College > CASE-IT > BSIT" style names -> a safe folder name like "BSIT".
  */
-function safe_folder_name($name) {
+function safe_folder_name($name)
+{
     $folder = preg_replace('/[^A-Za-z0-9_-]+/', '_', trim($name));
     $folder = trim($folder, '_');
     return $folder === '' ? 'program' : $folder;
@@ -101,7 +110,8 @@ function safe_folder_name($name) {
  * Keeps the file readable but removes anything risky
  * ("Grading Sheet (final).PDF" -> "Grading_Sheet_final.pdf").
  */
-function safe_file_name($original) {
+function safe_file_name($original)
+{
     $ext  = strtolower(pathinfo($original, PATHINFO_EXTENSION));
     $base = pathinfo($original, PATHINFO_FILENAME);
     $base = preg_replace('/[^A-Za-z0-9 _-]+/', '', $base);
@@ -117,7 +127,8 @@ function safe_file_name($original) {
  * Checks one entry of $_FILES. Returns '' when it is fine,
  * otherwise a message that can be shown to the user.
  */
-function validate_upload($file) {
+function validate_upload($file)
+{
     if (!is_array($file) || !isset($file['error'])) {
         return "Please choose a file.";
     }
@@ -130,7 +141,7 @@ function validate_upload($file) {
         case UPLOAD_ERR_INI_SIZE:
         case UPLOAD_ERR_FORM_SIZE:
             return "That file is too big for the server settings (upload_max_filesize is "
-                 . ini_get('upload_max_filesize') . "). The system allows up to 10 MB.";
+                . ini_get('upload_max_filesize') . "). The system allows up to 10 MB.";
         default:
             return "The upload failed (error code " . (int)$file['error'] . "). Please try again.";
     }
@@ -155,7 +166,8 @@ function validate_upload($file) {
  * Returns the path to store in the database, or false on failure.
  * $mover exists only so this can be tested outside a real upload.
  */
-function store_uploaded_file($tmp_path, $original_name, $program_name, $mover = 'move_uploaded_file') {
+function store_uploaded_file($tmp_path, $original_name, $program_name, $mover = 'move_uploaded_file')
+{
     $folder = safe_folder_name($program_name);
     $dir    = dirname(__DIR__) . '/uploads/' . $folder;
 
@@ -178,7 +190,8 @@ function store_uploaded_file($tmp_path, $original_name, $program_name, $mover = 
 }
 
 // Number of unread notifications for a user (shown as a bubble in the sidebars)
-function unread_notifications($conn, $user_id) {
+function unread_notifications($conn, $user_id)
+{
     $stmt = $conn->prepare("SELECT COUNT(*) AS c FROM notifications WHERE user_id = ? AND is_read = 0");
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
@@ -193,18 +206,21 @@ function unread_notifications($conn, $user_id) {
 
 // Program may swap the file while QA has not started (sent/received),
 // or when QA sent it back (needs_revision).
-function program_can_replace($status) {
+function program_can_replace($status)
+{
     return in_array($status, ['sent', 'received', 'needs_revision'], true);
 }
 
 // Program may withdraw (delete) a file only while QA has not started on it.
 // Once it is under_review / approved / rejected it is locked.
-function program_can_delete($status) {
-    return in_array($status, ['sent', 'received','need_revision'], true);
+function program_can_delete($status)
+{
+    return in_array($status, ['sent', 'received', 'need_revision'], true);
 }
 
 // Sends one notification to every active, approved QA user.
-function notify_active_qa($conn, $file_id, $message) {
+function notify_active_qa($conn, $file_id, $message)
+{
     $message = mb_substr($message, 0, 250);
     $qa = $conn->query(
         "SELECT u.user_id FROM users u
@@ -223,7 +239,8 @@ function notify_active_qa($conn, $file_id, $message) {
 // The optional note a Program user typed when sending a file.
 // It is saved in file_logs.remarks (action 'sent' or 'resubmitted'). When a file was
 // replaced, the log starts with "Replaces file #12." -- that part is removed here.
-function program_note($remarks) {
+function program_note($remarks)
+{
     $note = preg_replace('/^Replaces file #\d+\.?\s*/', '', trim((string)$remarks));
     return trim($note);
 }
