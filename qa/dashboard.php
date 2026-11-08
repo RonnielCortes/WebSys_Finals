@@ -193,7 +193,7 @@ $programs = load_programs($conn);
     <div class="page-top">
         <div>
             <h2>QA Dashboard</h2>
-            <p class="muted">Welcome, <?= qd_h(session_display_name($conn)) ?>. Here is what is new.</p>
+            <p class="muted">Welcome, <?= qd_h(session_display_name($conn)) ?></p>
         </div>
         <div class="top-date"><?= date('D, M d, Y') ?></div>
     </div>
