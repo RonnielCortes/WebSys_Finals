@@ -143,7 +143,7 @@ function initials($name) {
     <div class="page-top">
         <div>
             <h2>Admin Dashboard</h2>
-            <p class="muted">Welcome back, <?= htmlspecialchars(session_display_name($conn)) ?>! Here's what's happening in the system.</p>
+            <p class="muted">Welcome back, <?= htmlspecialchars(session_display_name($conn)) ?></p>
         </div>
         <div class="top-date"><?= date('D, M d, Y') ?></div>
     </div>
@@ -178,40 +178,6 @@ function initials($name) {
             <a href="manage_accounts.php" class="dash-btn">Review now</a>
         </div>
     <?php endif; ?>
-
-    <!-- charts -->
-    <div class="dash-grid dash-grid-a">
-        <section class="dash-panel">
-            <h3>Files by Program / Office</h3>
-            <p class="dash-hint">Current versions only &middot; top 6</p>
-            <?php if (empty($by_program)): ?>
-                <div class="dash-empty">No files yet.</div>
-            <?php else: ?>
-                <?php foreach ($by_program as $p): ?>
-                    <div class="dash-bar" title="<?= htmlspecialchars($p['crumb']) ?>">
-                        <span><?= htmlspecialchars($p['name']) ?></span>
-                        <div class="dash-track"><div class="dash-fill" style="width: <?= max(4, round($p['count'] / $max_program * 100)) ?>%"></div></div>
-                        <b><?= $p['count'] ?></b>
-                    </div>
-                <?php endforeach; ?>
-            <?php endif; ?>
-        </section>
-
-        <section class="dash-panel">
-            <h3>Files by Status</h3>
-            <p class="dash-hint">Where everything stands right now</p>
-            <div class="dash-donut-wrap">
-                <div class="dash-donut" style="background: conic-gradient(<?= $donut_css ?>);">
-                    <div><b><?= $total_files ?></b><small>files</small></div>
-                </div>
-                <div class="dash-legend">
-                    <?php foreach ($status_groups as $g): ?>
-                        <div><i style="background: <?= $g['color'] ?>"></i><?= htmlspecialchars($g['label']) ?><b><?= $g['count'] ?></b></div>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-        </section>
-    </div>
 
     <!-- tables -->
     <div class="dash-grid dash-grid-b">

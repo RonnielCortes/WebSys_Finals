@@ -1211,3 +1211,7 @@ body.sb-minimized .user-info { display: none; }
 .sidebar-footer .user-link:hover .user-info b { text-decoration: underline; }
 .user-avatar { overflow: hidden; }
 .user-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Login: message under the exact box that is wrong */
+.field-error { margin: 6px 0 0 4px; font-size: 13px; color: #b91c1c; }
+input.has-error { border-color: #dc2626 !important; }
