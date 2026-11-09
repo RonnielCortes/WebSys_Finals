@@ -124,6 +124,7 @@ $flash_text = [
       <div>
           <h2>Categories</h2>
           <p class="muted">The types of documents Programs can choose when they upload.</p>
+          &nbsp;
       </div>
   </div>
 
