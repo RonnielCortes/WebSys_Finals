@@ -66,18 +66,31 @@ $error = "";
 // false = QA has not started yet and Program just swaps the file (replace)
 $is_resubmit = $old && $old['status'] === 'needs_revision';
 $selected_category = $old ? (int)$old['category_id'] : 0;
+$choose_new   = false;   // true = the Program user picked "+ Add new category"
+$new_cat_text = "";
 $note = "";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $selected_category = (int)($_POST['category_id'] ?? 0);
+    $cat_choice = $_POST['category_id'] ?? '';
     $note = trim($_POST['note'] ?? '');
+
+    if ($cat_choice === 'new') {
+        // a brand-new category typed by the Program user
+        $choose_new        = true;
+        $selected_category = 0;
+        $new_cat_text      = clean_category_name($_POST['new_category'] ?? '');
+    } else {
+        $selected_category = (int)$cat_choice;
+    }
 
     // If the whole request was bigger than PHP's post_max_size,
     // PHP throws away both $_POST and $_FILES.
     if (empty($_POST) && empty($_FILES) && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
         $error = "That file is too big for the server settings (post_max_size is "
             . ini_get('post_max_size') . "). The system allows up to 10 MB.";
-    } elseif (!isset($categories[$selected_category])) {
+    } elseif ($choose_new && ($msg = category_name_error($new_cat_text)) !== '') {
+        $error = $msg;
+    } elseif (!$choose_new && !isset($categories[$selected_category])) {
         $error = "Please choose a category.";
     } else {
         $error = validate_upload($_FILES['document'] ?? null);
@@ -95,6 +108,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             try {
                 $conn->begin_transaction();
+
+                // 0) a new category? reuse an existing one with the same name, otherwise create it
+                if ($choose_new) {
+                    $selected_category = find_or_create_category($conn, $new_cat_text);
+                }
 
                 // 1) the new file (status always starts as 'sent')
                 $replaces = $old ? (int)$old['file_id'] : null;
@@ -212,11 +230,15 @@ $page_title = $is_resubmit ? 'Re-submit File' : ($old ? 'Replace File' : 'Upload
                     <select name="category_id" id="category_id" required>
                         <option value="">Select a category</option>
                         <?php foreach ($categories as $id => $name): ?>
-                            <option value="<?= $id ?>" <?= $selected_category === $id ? 'selected' : '' ?>>
+                            <option value="<?= $id ?>" <?= (!$choose_new && $selected_category === $id) ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($name) ?>
                             </option>
                         <?php endforeach; ?>
+                        <option value="new" <?= $choose_new ? 'selected' : '' ?>>+ Add new category&hellip;</option>
                     </select>
+                    <input type="text" name="new_category" id="new_category" maxlength="50"
+                           placeholder="Type the new category name" value="<?= htmlspecialchars($new_cat_text) ?>"
+                           <?= $choose_new ? '' : 'hidden' ?>>
                 </div>
 
                 <div class="upload-field">

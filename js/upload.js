@@ -3,6 +3,7 @@
 // Shows the chosen file's name and size inside the drop zone,
 // and blocks files over 10 MB before they are sent.
 // (Dragging a file onto the zone works by itself: the real file input covers it.)
+// Also: choosing "+ Add new category" in the Category list shows a box to type the name.
 // ============================================
 (function () {
     var input = document.getElementById('document');
@@ -48,4 +49,23 @@
     zone.addEventListener('drop',      function () { zone.classList.remove('dragging'); });
 
     refresh();
+})();
+
+// ---- "+ Add new category" ----
+(function () {
+    var select = document.getElementById('category_id');
+    var box    = document.getElementById('new_category');
+    if (!select || !box) return;
+
+    function refresh() {
+        var isNew = select.value === 'new';
+        box.hidden   = !isNew;
+        box.required = isNew;
+        if (isNew) box.focus();
+    }
+
+    select.addEventListener('change', refresh);
+    // when the page reloads with an error, keep the box open if "new" was chosen
+    box.hidden   = select.value !== 'new';
+    box.required = select.value === 'new';
 })();

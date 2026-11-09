@@ -244,3 +244,51 @@ function program_note($remarks)
     $note = preg_replace('/^Replaces file #\d+\.?\s*/', '', trim((string)$remarks));
     return trim($note);
 }
+
+// ============================================================
+// Paste at the END of includes/helpers.php  (after program_note()).
+// Categories: used by program/upload.php and qa/categories.php
+// ============================================================
+
+// "  Lesson   plan " -> "Lesson plan"
+function clean_category_name($name)
+{
+    return trim(preg_replace('/\s+/u', ' ', (string)$name));
+}
+
+// '' = fine, otherwise a message that can be shown to the user
+function category_name_error($name)
+{
+    $len = mb_strlen($name);
+    if ($len < 2) {
+        return "The category name must be at least 2 characters.";
+    }
+    if ($len > 50) {
+        return "The category name can be at most 50 characters.";
+    }
+    if (!preg_match('/^[\p{L}\p{N} &\/().,\'-]+$/u', $name)) {
+        return "The category name can only have letters, numbers, spaces and & / ( ) . , ' -";
+    }
+    return '';
+}
+
+// Case-insensitive: "reports" and "Reports" are the same category.
+// Returns the id of the existing category, or creates it and returns the new id.
+function find_or_create_category($conn, $name)
+{
+    $stmt = $conn->prepare("SELECT category_id FROM file_categories WHERE LOWER(category_name) = LOWER(?) LIMIT 1");
+    $stmt->bind_param("s", $name);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if ($row) {
+        return (int)$row['category_id'];
+    }
+
+    $stmt = $conn->prepare("INSERT INTO file_categories (category_name) VALUES (?)");
+    $stmt->bind_param("s", $name);
+    $stmt->execute();
+    $id = (int)$conn->insert_id;
+    $stmt->close();
+    return $id;
+}
