@@ -81,6 +81,7 @@
 // (The blue .alert-info notes, like "You are replacing ...", stay where they are.)
 // ============================================
 (function () {
+    function showToasts() {
     var alerts = document.querySelectorAll('.main-content .alert-success, .main-content .alert-error');
     if (!alerts.length) return;
 
@@ -119,4 +120,12 @@
         stack.appendChild(el);                    // moves it out of the page into the corner
         start(ms);
     });
+    }
+
+    // sidebar.js is loaded BEFORE the page content, so wait until the page is read
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', showToasts);
+    } else {
+        showToasts();
+    }
 })();

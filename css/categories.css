@@ -50,3 +50,20 @@
 @media (max-width: 560px) {
     .cat-edit { flex-wrap: wrap; }
 }
+
+/* ---- Folders page (qa/folders.php) ---- */
+.fold-add select {
+    box-sizing: border-box; min-height: 40px; padding: 0 12px; max-width: 100%;
+    border: 1px solid #ddd6fe; border-radius: 10px; background: #fff; color: #2e1065;
+    font: inherit; font-size: 14px;
+}
+.fold-add select:focus { outline: none; border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.18); }
+.fold-hint { margin: 10px 0 0; font-size: 12px; color: #8b7bb5; }
+.fold-level {
+    flex: 0 0 120px; text-align: center; box-sizing: border-box;
+    padding: 4px 0; border-radius: 999px; font-size: 11px; font-weight: bold;
+    background: #f3effd; color: #6b5b8c;
+}
+.fold-education_level { background: #ede9fe; color: #5b21b6; }
+.fold-office          { background: #fef3c7; color: #92400e; }
+.fold-program         { background: #dcfce7; color: #166534; }
