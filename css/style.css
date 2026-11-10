@@ -1350,3 +1350,14 @@ input.has-error { border-color: #dc2626 !important; }
 @media (prefers-reduced-motion: reduce) {
     .alert.toast, .alert.toast::after { animation: none; }
 }
+/* Login / Register: the full system name as the label above the title
+   (long text, so it wraps nicely instead of being squeezed into a tiny pill) */
+.auth-form-panel .info-badge {
+    align-self: flex-start;
+    max-width: 100%;
+    padding: 7px 16px;
+    border-radius: 14px;
+    font-size: 12px;
+    line-height: 1.45;
+    letter-spacing: 0.4px;
+}
