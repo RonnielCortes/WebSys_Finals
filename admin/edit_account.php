@@ -199,7 +199,7 @@ $role_text = ($user['role_name'] === 'qa') ? 'QA' : ucfirst($user['role_name']);
 
 
 //dapat hindi sendback
-//dapat may filtering yung notification 
+//dapat may filtering yung notification  DONE NA
 //dapat yung alert is pop up lang tyaka dapat seconds lang sya nde na yung ni rerefresh
 //dapat maganda
 //dapat ginagawa qa is pwede syang gumawa ng files for the program/employees
