@@ -62,7 +62,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // keep what was typed if there is an error
     $user['full_name'] = $full_name;
     $user['email']     = $email;
-    if ($is_program_user) { $user['program_id'] = $program_id; }
+    if ($is_program_user) {
+        $user['program_id'] = $program_id;
+    }
 
     if (!hash_equals($csrf, (string)($_POST['csrf'] ?? ''))) {
         $error = "The page expired. Please try again.";
@@ -126,83 +128,86 @@ $role_text = ($user['role_name'] === 'qa') ? 'QA' : ucfirst($user['role_name']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Edit Account</title>
-<link rel="stylesheet" href="../css/style.css?v=<?= @filemtime(__DIR__ . '/../css/style.css') ?>">
-<link rel="stylesheet" href="../css/account.css?v=<?= @filemtime(__DIR__ . '/../css/account.css') ?>">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Account</title>
+    <link rel="stylesheet" href="../css/style.css?v=<?= @filemtime(__DIR__ . '/../css/style.css') ?>">
+    <link rel="stylesheet" href="../css/account.css?v=<?= @filemtime(__DIR__ . '/../css/account.css') ?>">
 </head>
+
 <body class="with-sidebar">
 
-<?php include __DIR__ . '/../includes/admin_sidebar.php'; ?>
+    <?php include __DIR__ . '/../includes/admin_sidebar.php'; ?>
 
-<main class="main-content account-page">
-  <div class="acct-wrap">
+    <main class="main-content account-page">
+        <div class="acct-wrap">
 
-    <div class="acct-title">
-        <h2>Edit Account</h2>
-        <p class="muted">@<?= htmlspecialchars($user['username']) ?> &middot; <?= htmlspecialchars($role_text) ?></p>
-    </div>
+            <div class="acct-title">
+                <h2>Edit Account</h2>
+                <p class="muted">@<?= htmlspecialchars($user['username']) ?> &middot; <?= htmlspecialchars($role_text) ?></p>
+            </div>
 
-    <?php if ($error): ?>
-        <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
-    <?php endif; ?>
-
-    <section class="dash-panel acct-card">
-      <form method="POST" action="edit_account.php?id=<?= $user_id ?>" class="acct-form" autocomplete="off">
-        <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
-        <input type="hidden" name="user_id" value="<?= $user_id ?>">
-
-        <label for="username">Username</label>
-        <input type="text" id="username" value="<?= htmlspecialchars($user['username']) ?>" disabled>
-
-        <label for="full_name">Full name</label>
-        <input type="text" name="full_name" id="full_name" maxlength="100" value="<?= htmlspecialchars($user['full_name'] ?? '') ?>" required>
-
-        <label for="email">Email</label>
-        <input type="email" name="email" id="email" maxlength="100" value="<?= htmlspecialchars($user['email'] ?? '') ?>" required>
-
-        <?php if ($is_program_user): ?>
-            <label for="program_id">Program / Office</label>
-            <select name="program_id" id="program_id" required>
-                <option value="">-- Select program/office --</option>
-                <?php foreach ($units as $id => $u): ?>
-                    <option value="<?= $id ?>" <?= (int)$user['program_id'] === $id ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($u['program_name']) ?> (<?= htmlspecialchars($u['level']) ?>)
-                    </option>
-                <?php endforeach; ?>
-            </select>
-            <?php if (!empty($user['requested_unit']) && empty($user['program_id'])): ?>
-                <small class="muted"><strong>The user typed:</strong> &ldquo;<?= htmlspecialchars($user['requested_unit']) ?>&rdquo;. Pick the matching folder. If it isn't in the list, ask QA to add it in Folders first.</small>
+            <?php if ($error): ?>
+                <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
             <?php endif; ?>
-            <small class="muted">If you change this, the user must log out and log in again for it to take effect.</small>
-        <?php endif; ?>
 
-        <label for="new_password">New password <span class="muted">(optional)</span></label>
-        <input type="password" name="new_password" id="new_password" minlength="8" autocomplete="new-password"
-               placeholder="Leave blank to keep the current password">
+            <section class="dash-panel acct-card">
+                <form method="POST" action="edit_account.php?id=<?= $user_id ?>" class="acct-form" autocomplete="off">
+                    <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
+                    <input type="hidden" name="user_id" value="<?= $user_id ?>">
 
-        <label for="confirm_password">Confirm new password</label>
-        <input type="password" name="confirm_password" id="confirm_password" minlength="8" autocomplete="new-password">
-        <small class="muted">Only fill these in to reset the password (at least 8 characters). Tell the user their new password in person.</small>
+                    <label for="username">Username</label>
+                    <input type="text" id="username" value="<?= htmlspecialchars($user['username']) ?>" disabled>
 
-        <div class="acct-actions acct-actions-split">
-            <a href="manage_accounts.php" class="acct-cancel">Cancel</a>
-            <button type="submit" class="acct-btn">Save changes</button>
+                    <label for="full_name">Full name</label>
+                    <input type="text" name="full_name" id="full_name" maxlength="100" value="<?= htmlspecialchars($user['full_name'] ?? '') ?>" required>
+
+                    <label for="email">Email</label>
+                    <input type="email" name="email" id="email" maxlength="100" value="<?= htmlspecialchars($user['email'] ?? '') ?>" required>
+
+                    <?php if ($is_program_user): ?>
+                        <label for="program_id">Program / Office</label>
+                        <select name="program_id" id="program_id" required>
+                            <option value="">-- Select program/office --</option>
+                            <?php foreach ($units as $id => $u): ?>
+                                <option value="<?= $id ?>" <?= (int)$user['program_id'] === $id ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($u['program_name']) ?> (<?= htmlspecialchars($u['level']) ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <?php if (!empty($user['requested_unit']) && empty($user['program_id'])): ?>
+                            <small class="muted"><strong>The user typed:</strong> &ldquo;<?= htmlspecialchars($user['requested_unit']) ?>&rdquo;. Pick the matching folder. If it isn't in the list, ask QA to add it in Folders first.</small>
+                        <?php endif; ?>
+                        <small class="muted">If you change this, the user must log out and log in again for it to take effect.</small>
+                    <?php endif; ?>
+
+                    <label for="new_password">New password <span class="muted">(optional)</span></label>
+                    <input type="password" name="new_password" id="new_password" minlength="8" autocomplete="new-password"
+                        placeholder="Leave blank to keep the current password">
+
+                    <label for="confirm_password">Confirm new password</label>
+                    <input type="password" name="confirm_password" id="confirm_password" minlength="8" autocomplete="new-password">
+                    <small class="muted">Only fill these in to reset the password (at least 8 characters). Tell the user their new password in person.</small>
+
+                    <div class="acct-actions acct-actions-split">
+                        <a href="manage_accounts.php" class="acct-cancel">Cancel</a>
+                        <button type="submit" class="acct-btn">Save changes</button>
+                    </div>
+                </form>
+            </section>
+
         </div>
-      </form>
-    </section>
-
-  </div>
-</main>
+    </main>
 
 </body>
+
 </html>
 
 
 //dapat hindi sendback
-//dapat may filtering yung notification  DONE NA
+//dapat may filtering yung notification DONE NA
 //dapat yung alert is pop up lang tyaka dapat seconds lang sya nde na yung ni rerefresh DONE NA
 //dapat maganda
 //dapat ginagawa qa is pwede syang gumawa ng files for the program/employees

@@ -17,14 +17,18 @@ $total_files    = (int)$conn->query("SELECT COUNT(*) AS c FROM files WHERE is_ar
 // Accounts by role
 $role_counts = ['admin' => 0, 'qa' => 0, 'program' => 0];
 $res = $conn->query("SELECT r.role_name, COUNT(*) AS c FROM users u JOIN roles r ON u.role_id = r.role_id GROUP BY r.role_name");
-while ($r = $res->fetch_assoc()) { $role_counts[$r['role_name']] = (int)$r['c']; }
+while ($r = $res->fetch_assoc()) {
+    $role_counts[$r['role_name']] = (int)$r['c'];
+}
 
 // ---------------------------------------------------------------
 // Files by status (current versions only)
 // ---------------------------------------------------------------
 $status_counts = array_fill_keys(file_statuses(), 0);
 $res = $conn->query("SELECT status, COUNT(*) AS c FROM files WHERE is_archived = 0 GROUP BY status");
-while ($r = $res->fetch_assoc()) { $status_counts[$r['status']] = (int)$r['c']; }
+while ($r = $res->fetch_assoc()) {
+    $status_counts[$r['status']] = (int)$r['c'];
+}
 
 $status_groups = [
     ['label' => 'Sent / Received', 'keys' => ['sent', 'received'],     'color' => '#6d28d9'],
@@ -33,10 +37,13 @@ $status_groups = [
     ['label' => 'Needs revision',  'keys' => ['needs_revision'],       'color' => '#fb923c'],
     ['label' => 'Rejected / Returned', 'keys' => ['rejected', 'returned'], 'color' => '#f0abfc'],
 ];
-$donut_parts = []; $angle = 0;
+$donut_parts = [];
+$angle = 0;
 foreach ($status_groups as $i => $g) {
     $n = 0;
-    foreach ($g['keys'] as $k) { $n += $status_counts[$k]; }
+    foreach ($g['keys'] as $k) {
+        $n += $status_counts[$k];
+    }
     $status_groups[$i]['count'] = $n;
     if ($total_files > 0 && $n > 0) {
         $end = $angle + ($n / $total_files) * 100;
@@ -70,7 +77,9 @@ $row = $conn->query(
     "SELECT DATEDIFF(NOW(), MIN(created_at)) AS d FROM files
      WHERE is_archived = 0 AND status IN ('sent','received','under_review')"
 )->fetch_assoc();
-if ($row && $row['d'] !== null) { $oldest_days = (int)$row['d']; }
+if ($row && $row['d'] !== null) {
+    $oldest_days = (int)$row['d'];
+}
 
 // ---------------------------------------------------------------
 // Recent files (5)
@@ -106,7 +115,8 @@ $activity = $conn->query(
      ORDER BY l.timestamp DESC, l.log_id DESC LIMIT 8"
 )->fetch_all(MYSQLI_ASSOC);
 
-function activity_text($action) {
+function activity_text($action)
+{
     $map = [
         'sent'                 => 'sent',
         'resubmitted'          => 're-submitted',
@@ -121,150 +131,163 @@ function activity_text($action) {
     return $map[$action] ?? $action;
 }
 
-function initials($name) {
+function initials($name)
+{
     $parts = preg_split('/\s+/', trim($name));
     $i = strtoupper(mb_substr($parts[0] ?? '?', 0, 1));
-    if (count($parts) > 1) { $i .= strtoupper(mb_substr(end($parts), 0, 1)); }
+    if (count($parts) > 1) {
+        $i .= strtoupper(mb_substr(end($parts), 0, 1));
+    }
     return $i;
 }
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<title>Admin Dashboard</title>
-<link rel="stylesheet" href="../css/style.css?v=<?= @filemtime(__DIR__ . '/../css/style.css') ?>">
+    <meta charset="UTF-8">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="../css/style.css?v=<?= @filemtime(__DIR__ . '/../css/style.css') ?>">
 </head>
+
 <body class="with-sidebar">
 
-<?php include __DIR__ . '/../includes/admin_sidebar.php'; ?>
+    <?php include __DIR__ . '/../includes/admin_sidebar.php'; ?>
 
-<main class="main-content">
-    <div class="page-top">
-        <div>
-            <h2>Admin Dashboard</h2>
-           <p class="muted">Welcome back, <strong class="welcome-name"><?= htmlspecialchars(session_display_name($conn)) ?></strong></p>
+    <main class="main-content">
+        <div class="page-top">
+            <div>
+                <h2>Admin Dashboard</h2>
+                <p class="muted">Welcome back, <strong class="welcome-name"><?= htmlspecialchars(session_display_name($conn)) ?></strong></p>
+            </div>
+            <div class="top-date"><?= date('D, M d, Y') ?></div>
         </div>
-        <div class="top-date"><?= date('D, M d, Y') ?></div>
-    </div>
 
-    <!-- stat cards -->
-    <div class="dash-cards">
-        <div class="dash-card dash-card-hot">
-            <span class="dash-num"><?= $pending_count ?></span>
-            <span class="dash-label">Pending Accounts</span>
-            <span class="dash-note"><?= $pending_count ? 'Needs your approval' : 'All caught up' ?></span>
+        <!-- stat cards -->
+        <div class="dash-cards">
+            <div class="dash-card dash-card-hot">
+                <span class="dash-num"><?= $pending_count ?></span>
+                <span class="dash-label">Pending Accounts</span>
+                <span class="dash-note"><?= $pending_count ? 'Needs your approval' : 'All caught up' ?></span>
+            </div>
+            <div class="dash-card">
+                <span class="dash-num"><?= $total_accounts ?></span>
+                <span class="dash-label">Total Accounts</span>
+                <span class="dash-note"><?= $role_counts['admin'] ?> admin &middot; <?= $role_counts['qa'] ?> QA &middot; <?= $role_counts['program'] ?> program<?= $inactive_count ? ' &middot; ' . $inactive_count . ' inactive' : '' ?></span>
+            </div>
+            <div class="dash-card">
+                <span class="dash-num"><?= $total_files ?></span>
+                <span class="dash-label">Total Files</span>
+                <span class="dash-note">Current versions only</span>
+            </div>
+            <div class="dash-card">
+                <span class="dash-num"><?= $oldest_days === null ? '&mdash;' : $oldest_days . 'd' ?></span>
+                <span class="dash-label">Oldest Waiting for QA</span>
+                <span class="dash-note"><?= $oldest_days === null ? 'Nothing waiting' : ($oldest_days === 0 ? 'Sent today' : 'Longest wait in the queue') ?></span>
+            </div>
         </div>
-        <div class="dash-card">
-            <span class="dash-num"><?= $total_accounts ?></span>
-            <span class="dash-label">Total Accounts</span>
-            <span class="dash-note"><?= $role_counts['admin'] ?> admin &middot; <?= $role_counts['qa'] ?> QA &middot; <?= $role_counts['program'] ?> program<?= $inactive_count ? ' &middot; ' . $inactive_count . ' inactive' : '' ?></span>
-        </div>
-        <div class="dash-card">
-            <span class="dash-num"><?= $total_files ?></span>
-            <span class="dash-label">Total Files</span>
-            <span class="dash-note">Current versions only</span>
-        </div>
-        <div class="dash-card">
-            <span class="dash-num"><?= $oldest_days === null ? '&mdash;' : $oldest_days . 'd' ?></span>
-            <span class="dash-label">Oldest Waiting for QA</span>
-            <span class="dash-note"><?= $oldest_days === null ? 'Nothing waiting' : ($oldest_days === 0 ? 'Sent today' : 'Longest wait in the queue') ?></span>
-        </div>
-    </div>
 
-    <?php if ($pending_count > 0): ?>
-        <div class="dash-banner">
-            <span><strong><?= $pending_count ?> account<?= $pending_count > 1 ? 's are' : ' is' ?></strong> waiting for approval. Review so they can start using the system.</span>
-            <a href="manage_accounts.php" class="dash-btn">Review now</a>
-        </div>
-    <?php endif; ?>
-
-    <!-- tables -->
-    <div class="dash-grid dash-grid-b">
-        <section class="dash-panel">
-            <h3>Recent Files</h3>
-            <p class="dash-hint">Latest uploads from all programs</p>
-            <?php if (empty($recent_files)): ?>
-                <div class="dash-empty">No files have been sent yet.</div>
-            <?php else: ?>
-                <table class="dash-table">
-                    <thead><tr><th>File</th><th>From</th><th>Status</th><th>Date</th></tr></thead>
-                    <tbody>
-                    <?php foreach ($recent_files as $f): ?>
-                        <tr>
-                            <td><a href="../download.php?id=<?= (int)$f['file_id'] ?>"><?= htmlspecialchars(display_name($f['file_path'])) ?></a></td>
-                            <td><?= htmlspecialchars(isset($programs[(int)$f['program_id']]) ? $programs[(int)$f['program_id']]['program_name'] : '—') ?></td>
-                            <td><span class="badge badge-status-<?= htmlspecialchars($f['status']) ?>"><?= htmlspecialchars(status_label($f['status'])) ?></span></td>
-                            <td><?= date('M d, h:i A', strtotime($f['created_at'])) ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                    </tbody>
-                </table>
-                <a href="files.php" class="dash-link">View all files</a>
-            <?php endif; ?>
-        </section>
-
-        <section class="dash-panel">
-            <h3>Waiting for Approval</h3>
-            <p class="dash-hint">New accounts that registered</p>
-            <?php if (empty($pending_accounts)): ?>
-                <div class="dash-empty">No pending accounts.</div>
-            <?php else: ?>
-                <?php foreach ($pending_accounts as $u): $nm = $u['full_name'] ?: $u['username']; ?>
-                    <div class="dash-who">
-                        <div class="dash-avatar"><?= htmlspecialchars(initials($nm)) ?></div>
-                        <div class="dash-who-text">
-                            <b><?= htmlspecialchars($nm) ?></b>
-                            <small><?= $u['role_name'] === 'program' ? 'Program &middot; ' . htmlspecialchars($u['program_name'] ?? ($u['requested_unit'] ? 'Other: ' . $u['requested_unit'] : '—')) : strtoupper(htmlspecialchars($u['role_name'])) ?></small>
-                        </div>
-                        <div class="dash-actions">
-                            <form method="POST" action="accounts_handler.php">
-                                <input type="hidden" name="user_id" value="<?= (int)$u['user_id'] ?>">
-                                <input type="hidden" name="action" value="approve">
-                                <input type="hidden" name="return" value="dashboard">
-                                <button type="submit" class="dash-mini dash-mini-ok">Approve</button>
-                            </form>
-                            <form method="POST" action="accounts_handler.php">
-                                <input type="hidden" name="user_id" value="<?= (int)$u['user_id'] ?>">
-                                <input type="hidden" name="action" value="reject">
-                                <input type="hidden" name="return" value="dashboard">
-                                <button type="submit" class="dash-mini dash-mini-no">Reject</button>
-                            </form>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-                <a href="manage_accounts.php" class="dash-link">Manage all accounts &rarr;</a>
-            <?php endif; ?>
-        </section>
-    </div>
-
-    <!-- activity -->
-    <section class="dash-panel">
-        <h3>Recent Activity</h3>
-        <p class="dash-hint">Latest actions on files, from the file history</p>
-        <?php if (empty($activity)): ?>
-            <div class="dash-empty">No activity yet.</div>
-        <?php else: ?>
-            <ul class="dash-activity">
-                <?php foreach ($activity as $a): ?>
-                    <li>
-                        <span class="dash-dot"></span>
-                        <div>
-                            <b><?= htmlspecialchars($a['actor']) ?></b>
-                            <span class="dash-role"><?= htmlspecialchars(strtoupper($a['role_name'])) ?></span>
-                            <?= htmlspecialchars(activity_text($a['action'])) ?>
-                            <?php if ($a['action'] === 'flagged_for_revision' && $a['remarks']): ?>
-                                <em>&ldquo;<?= htmlspecialchars(mb_strimwidth($a['remarks'], 0, 70, '…')) ?>&rdquo;</em>
-                            <?php endif; ?>
-                            <strong><?= htmlspecialchars(display_name($a['file_path'])) ?></strong>
-                        </div>
-                        <time><?= date('M d, h:i A', strtotime($a['timestamp'])) ?></time>
-                    </li>
-                <?php endforeach; ?>
-            </ul>
+        <?php if ($pending_count > 0): ?>
+            <div class="dash-banner">
+                <span><strong><?= $pending_count ?> account<?= $pending_count > 1 ? 's are' : ' is' ?></strong> waiting for approval. Review so they can start using the system.</span>
+                <a href="manage_accounts.php" class="dash-btn">Review now</a>
+            </div>
         <?php endif; ?>
-    </section>
-</main>
+
+        <!-- tables -->
+        <div class="dash-grid dash-grid-b">
+            <section class="dash-panel">
+                <h3>Recent Files</h3>
+                <p class="dash-hint">Latest uploads from all programs</p>
+                <?php if (empty($recent_files)): ?>
+                    <div class="dash-empty">No files have been sent yet.</div>
+                <?php else: ?>
+                    <table class="dash-table">
+                        <thead>
+                            <tr>
+                                <th>File</th>
+                                <th>From</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($recent_files as $f): ?>
+                                <tr>
+                                    <td><a href="../download.php?id=<?= (int)$f['file_id'] ?>"><?= htmlspecialchars(display_name($f['file_path'])) ?></a></td>
+                                    <td><?= htmlspecialchars(isset($programs[(int)$f['program_id']]) ? $programs[(int)$f['program_id']]['program_name'] : '—') ?></td>
+                                    <td><span class="badge badge-status-<?= htmlspecialchars($f['status']) ?>"><?= htmlspecialchars(status_label($f['status'])) ?></span></td>
+                                    <td><?= date('M d, h:i A', strtotime($f['created_at'])) ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                    <a href="files.php" class="dash-link">View all files</a>
+                <?php endif; ?>
+            </section>
+
+            <section class="dash-panel">
+                <h3>Waiting for Approval</h3>
+                <p class="dash-hint">New accounts that registered</p>
+                <?php if (empty($pending_accounts)): ?>
+                    <div class="dash-empty">No pending accounts.</div>
+                <?php else: ?>
+                    <?php foreach ($pending_accounts as $u): $nm = $u['full_name'] ?: $u['username']; ?>
+                        <div class="dash-who">
+                            <div class="dash-avatar"><?= htmlspecialchars(initials($nm)) ?></div>
+                            <div class="dash-who-text">
+                                <b><?= htmlspecialchars($nm) ?></b>
+                                <small><?= $u['role_name'] === 'program' ? 'Program &middot; ' . htmlspecialchars($u['program_name'] ?? ($u['requested_unit'] ? 'Other: ' . $u['requested_unit'] : '—')) : strtoupper(htmlspecialchars($u['role_name'])) ?></small>
+                            </div>
+                            <div class="dash-actions">
+                                <form method="POST" action="accounts_handler.php">
+                                    <input type="hidden" name="user_id" value="<?= (int)$u['user_id'] ?>">
+                                    <input type="hidden" name="action" value="approve">
+                                    <input type="hidden" name="return" value="dashboard">
+                                    <button type="submit" class="dash-mini dash-mini-ok">Approve</button>
+                                </form>
+                                <form method="POST" action="accounts_handler.php">
+                                    <input type="hidden" name="user_id" value="<?= (int)$u['user_id'] ?>">
+                                    <input type="hidden" name="action" value="reject">
+                                    <input type="hidden" name="return" value="dashboard">
+                                    <button type="submit" class="dash-mini dash-mini-no">Reject</button>
+                                </form>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                    <a href="manage_accounts.php" class="dash-link">Manage all accounts &rarr;</a>
+                <?php endif; ?>
+            </section>
+        </div>
+
+        <!-- activity -->
+        <section class="dash-panel">
+            <h3>Recent Activity</h3>
+            <p class="dash-hint">Latest actions on files, from the file history</p>
+            <?php if (empty($activity)): ?>
+                <div class="dash-empty">No activity yet.</div>
+            <?php else: ?>
+                <ul class="dash-activity">
+                    <?php foreach ($activity as $a): ?>
+                        <li>
+                            <span class="dash-dot"></span>
+                            <div>
+                                <b><?= htmlspecialchars($a['actor']) ?></b>
+                                <span class="dash-role"><?= htmlspecialchars(strtoupper($a['role_name'])) ?></span>
+                                <?= htmlspecialchars(activity_text($a['action'])) ?>
+                                <?php if ($a['action'] === 'flagged_for_revision' && $a['remarks']): ?>
+                                    <em>&ldquo;<?= htmlspecialchars(mb_strimwidth($a['remarks'], 0, 70, '…')) ?>&rdquo;</em>
+                                <?php endif; ?>
+                                <strong><?= htmlspecialchars(display_name($a['file_path'])) ?></strong>
+                            </div>
+                            <time><?= date('M d, h:i A', strtotime($a['timestamp'])) ?></time>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+        </section>
+    </main>
 
 </body>
+
 </html>

@@ -22,8 +22,11 @@ $error = "";
 $uploads_root = realpath(dirname(__DIR__) . '/uploads');
 
 // Deletes the physical file, but only if it really sits inside uploads/
-function remove_upload_file($uploads_root, $stored_path) {
-    if (!$uploads_root || !$stored_path) { return; }
+function remove_upload_file($uploads_root, $stored_path)
+{
+    if (!$uploads_root || !$stored_path) {
+        return;
+    }
     $full = realpath(dirname(__DIR__) . '/' . $stored_path);
     if ($full && strpos($full, $uploads_root . DIRECTORY_SEPARATOR) === 0 && is_file($full)) {
         @unlink($full);
@@ -51,26 +54,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute();
             $f = $stmt->get_result()->fetch_assoc();
             $stmt->close();
-            if (!$f) { $failed++; continue; }
+            if (!$f) {
+                $failed++;
+                continue;
+            }
 
             try {
                 $conn->begin_transaction();
 
                 $stmt = $conn->prepare("DELETE FROM notifications WHERE file_id = ?");
-                $stmt->bind_param("i", $id); $stmt->execute(); $stmt->close();
+                $stmt->bind_param("i", $id);
+                $stmt->execute();
+                $stmt->close();
 
                 $stmt = $conn->prepare("DELETE FROM file_logs WHERE file_id = ?");
-                $stmt->bind_param("i", $id); $stmt->execute(); $stmt->close();
+                $stmt->bind_param("i", $id);
+                $stmt->execute();
+                $stmt->close();
 
                 // a newer version that "replaces" this one keeps working
                 $stmt = $conn->prepare("UPDATE files SET replaces_file_id = NULL WHERE replaces_file_id = ?");
-                $stmt->bind_param("i", $id); $stmt->execute(); $stmt->close();
+                $stmt->bind_param("i", $id);
+                $stmt->execute();
+                $stmt->close();
 
                 $stmt = $conn->prepare("DELETE FROM files WHERE file_id = ? AND is_archived = 1");
-                $stmt->bind_param("i", $id); $stmt->execute();
+                $stmt->bind_param("i", $id);
+                $stmt->execute();
                 $gone = $stmt->affected_rows === 1;
                 $stmt->close();
-                if (!$gone) { throw new RuntimeException("not deleted"); }
+                if (!$gone) {
+                    throw new RuntimeException("not deleted");
+                }
 
                 $conn->commit();
                 remove_upload_file($uploads_root, $f['file_path']);   // only after the database part succeeded
@@ -130,9 +145,14 @@ foreach ($rows as &$r) {
 }
 unset($r);
 
-function pretty_bytes($b) {
-    if ($b < 1024) { return $b . ' B'; }
-    if ($b < 1024 * 1024) { return round($b / 1024) . ' KB'; }
+function pretty_bytes($b)
+{
+    if ($b < 1024) {
+        return $b . ' B';
+    }
+    if ($b < 1024 * 1024) {
+        return round($b / 1024) . ' KB';
+    }
     return number_format($b / (1024 * 1024), 1) . ' MB';
 }
 
@@ -145,86 +165,89 @@ if (($_GET['flash'] ?? '') === 'deleted') {
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Archived Files</title>
-<link rel="stylesheet" href="../css/style.css?v=<?= @filemtime(__DIR__ . '/../css/style.css') ?>">
-<link rel="stylesheet" href="../css/archive.css?v=<?= @filemtime(__DIR__ . '/../css/archive.css') ?>">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archived Files</title>
+    <link rel="stylesheet" href="../css/style.css?v=<?= @filemtime(__DIR__ . '/../css/style.css') ?>">
+    <link rel="stylesheet" href="../css/archive.css?v=<?= @filemtime(__DIR__ . '/../css/archive.css') ?>">
 </head>
+
 <body class="with-sidebar">
 
-<?php include __DIR__ . '/../includes/admin_sidebar.php'; ?>
+    <?php include __DIR__ . '/../includes/admin_sidebar.php'; ?>
 
-<main class="main-content">
-  <div class="page-top">
-      <div>
-          <h2>Archived Files</h2>
-          <p class="muted">Old versions and withdrawn files. Delete the ones you no longer need.</p>
-          &nbsp;
-      </div>
-  </div>
+    <main class="main-content">
+        <div class="page-top">
+            <div>
+                <h2>Archived Files</h2>
+                <p class="muted">Old versions and withdrawn files. Delete the ones you no longer need.</p>
+                &nbsp;
+            </div>
+        </div>
 
-  <?php if ($msg): ?><div class="alert alert-success"><?= htmlspecialchars($msg) ?></div><?php endif; ?>
-  <?php if ($error): ?><div class="alert alert-error"><?= htmlspecialchars($error) ?></div><?php endif; ?>
+        <?php if ($msg): ?><div class="alert alert-success"><?= htmlspecialchars($msg) ?></div><?php endif; ?>
+        <?php if ($error): ?><div class="alert alert-error"><?= htmlspecialchars($error) ?></div><?php endif; ?>
 
-  <section class="dash-panel">
-      <form method="GET" class="ar-filter">
-          <label for="days">Archived at least</label>
-          <input type="number" id="days" name="days" min="0" max="3650" value="<?= $days ?>">
-          <span>days ago</span>
-          <input type="text" name="q" placeholder="Search file name..." value="<?= htmlspecialchars($q) ?>">
-          <button type="submit" class="ar-btn alt">Show</button>
-          <?php if ($days || $q !== ''): ?><a href="archive.php" class="ar-reset">Reset</a><?php endif; ?>
-      </form>
-      <p class="dash-hint">0 days = every archived file. Tip: type 90, press Show, then select all to clear everything older than 90 days.</p>
-  </section>
+        <section class="dash-panel">
+            <form method="GET" class="ar-filter">
+                <label for="days">Archived at least</label>
+                <input type="number" id="days" name="days" min="0" max="3650" value="<?= $days ?>">
+                <span>days ago</span>
+                <input type="text" name="q" placeholder="Search file name..." value="<?= htmlspecialchars($q) ?>">
+                <button type="submit" class="ar-btn alt">Show</button>
+                <?php if ($days || $q !== ''): ?><a href="archive.php" class="ar-reset">Reset</a><?php endif; ?>
+            </form>
+            <p class="dash-hint">0 days = every archived file. Tip: type 90, press Show, then select all to clear everything older than 90 days.</p>
+        </section>
 
-  <section class="dash-panel ar-panel">
-      <form method="POST" id="ar-form">
-          <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
+        <section class="dash-panel ar-panel">
+            <form method="POST" id="ar-form">
+                <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
 
-          <div class="ar-bar">
-              <h3><?= count($rows) ?> file<?= count($rows) === 1 ? '' : 's' ?> <small><?= pretty_bytes($total_bytes) ?></small></h3>
-              <button type="submit" class="ar-btn danger" id="ar-delete" disabled>Delete completely</button>
-          </div>
+                <div class="ar-bar">
+                    <h3><?= count($rows) ?> file<?= count($rows) === 1 ? '' : 's' ?> <small><?= pretty_bytes($total_bytes) ?></small></h3>
+                    <button type="submit" class="ar-btn danger" id="ar-delete" disabled>Delete completely</button>
+                </div>
 
-          <?php if (!$rows): ?>
-              <div class="dash-empty">No archived files<?= ($days || $q !== '') ? ' match this filter' : '' ?>.</div>
-          <?php else: ?>
-          <div class="ar-scroll">
-          <table class="dash-table">
-              <thead>
-                  <tr>
-                      <th class="ar-check"><input type="checkbox" id="ar-all" aria-label="Select all"></th>
-                      <th>File</th>
-                      <th>Program / Office</th>
-                      <th>Category</th>
-                      <th>Why archived</th>
-                      <th>Archived</th>
-                      <th>Size</th>
-                  </tr>
-              </thead>
-              <tbody>
-              <?php foreach ($rows as $r): ?>
-                  <tr>
-                      <td class="ar-check"><input type="checkbox" name="ids[]" value="<?= (int)$r['file_id'] ?>" class="ar-one"></td>
-                      <td><b><?= htmlspecialchars(display_name($r['file_path'])) ?></b></td>
-                      <td><?= htmlspecialchars(program_breadcrumb($programs, $r['program_id'])) ?></td>
-                      <td><?= htmlspecialchars($r['category_name'] ?? '—') ?></td>
-                      <td><?= $r['how'] === 'replaced' ? 'Replaced by a newer version' : ($r['how'] === 'deleted_by_program' ? 'Withdrawn by the program' : 'Archived') ?></td>
-                      <td><?= date('M d, Y', strtotime($r['archived_at'])) ?> <small class="muted">(<?= $r['age'] ?> day<?= $r['age'] === 1 ? '' : 's' ?>)</small></td>
-                      <td><?= $r['bytes'] ? pretty_bytes($r['bytes']) : '<small class="muted">missing</small>' ?></td>
-                  </tr>
-              <?php endforeach; ?>
-              </tbody>
-          </table>
-          </div>
-          <?php endif; ?>
-      </form>
-  </section>
-</main>
+                <?php if (!$rows): ?>
+                    <div class="dash-empty">No archived files<?= ($days || $q !== '') ? ' match this filter' : '' ?>.</div>
+                <?php else: ?>
+                    <div class="ar-scroll">
+                        <table class="dash-table">
+                            <thead>
+                                <tr>
+                                    <th class="ar-check"><input type="checkbox" id="ar-all" aria-label="Select all"></th>
+                                    <th>File</th>
+                                    <th>Program / Office</th>
+                                    <th>Category</th>
+                                    <th>Why archived</th>
+                                    <th>Archived</th>
+                                    <th>Size</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($rows as $r): ?>
+                                    <tr>
+                                        <td class="ar-check"><input type="checkbox" name="ids[]" value="<?= (int)$r['file_id'] ?>" class="ar-one"></td>
+                                        <td><b><?= htmlspecialchars(display_name($r['file_path'])) ?></b></td>
+                                        <td><?= htmlspecialchars(program_breadcrumb($programs, $r['program_id'])) ?></td>
+                                        <td><?= htmlspecialchars($r['category_name'] ?? '—') ?></td>
+                                        <td><?= $r['how'] === 'replaced' ? 'Replaced by a newer version' : ($r['how'] === 'deleted_by_program' ? 'Withdrawn by the program' : 'Archived') ?></td>
+                                        <td><?= date('M d, Y', strtotime($r['archived_at'])) ?> <small class="muted">(<?= $r['age'] ?> day<?= $r['age'] === 1 ? '' : 's' ?>)</small></td>
+                                        <td><?= $r['bytes'] ? pretty_bytes($r['bytes']) : '<small class="muted">missing</small>' ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </form>
+        </section>
+    </main>
 
-<script src="../js/archive.js?v=<?= @filemtime(__DIR__ . '/../js/archive.js') ?>"></script>
+    <script src="../js/archive.js?v=<?= @filemtime(__DIR__ . '/../js/archive.js') ?>"></script>
 </body>
+
 </html>

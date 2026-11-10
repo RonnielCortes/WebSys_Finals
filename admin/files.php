@@ -95,114 +95,117 @@ $is_filtered = ($filter_program || $filter_status !== '' || $search !== '' || $s
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<title>Files</title>
-<link rel="stylesheet" href="../css/style.css?v=<?= @filemtime(__DIR__ . '/../css/style.css') ?>">
+    <meta charset="UTF-8">
+    <title>Files</title>
+    <link rel="stylesheet" href="../css/style.css?v=<?= @filemtime(__DIR__ . '/../css/style.css') ?>">
 </head>
+
 <body class="with-sidebar">
 
-<?php include __DIR__ . '/../includes/admin_sidebar.php'; ?>
+    <?php include __DIR__ . '/../includes/admin_sidebar.php'; ?>
 
-<main class="main-content">
-    <h2>Files</h2>
-    <p class="muted">
-        Showing <?= $shown ?> of <?= $total_files ?> file(s), grouped by where they came from.
-    </p>
+    <main class="main-content">
+        <h2>Files</h2>
+        <p class="muted">
+            Showing <?= $shown ?> of <?= $total_files ?> file(s), grouped by where they came from.
+        </p>
 
-    <form method="GET" action="files.php" class="filter-bar">
-        <div class="filter-field">
-            <label for="program">Program / Office</label>
-            <select name="program" id="program">
-                <option value="0">All</option>
-                <?php foreach ($program_options as $id => $label): ?>
-                    <option value="<?= $id ?>" <?= $filter_program === $id ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($label) ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-
-        <div class="filter-field">
-            <label for="status">Status</label>
-            <select name="status" id="status">
-                <option value="">All</option>
-                <?php foreach (file_statuses() as $s): ?>
-                    <option value="<?= $s ?>" <?= $filter_status === $s ? 'selected' : '' ?>>
-                        <?= htmlspecialchars(status_label($s)) ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-
-        <div class="filter-field">
-            <label for="q">File name</label>
-            <input type="text" name="q" id="q" value="<?= htmlspecialchars($search) ?>" placeholder="Search...">
-        </div>
-
-        <div class="filter-field">
-            <span class="filter-spacer" aria-hidden="true">&nbsp;</span>
-            <label class="check-label">
-                <input type="checkbox" name="archived" id="archived" value="1" <?= $show_archived ? 'checked' : '' ?>>
-                Include archived versions
-            </label>
-        </div>
-
-        <button type="submit">Filter</button>
-        <?php if ($is_filtered): ?>
-            <a href="files.php" class="btn-reset">Reset</a>
-        <?php endif; ?>
-    </form>
-
-    <?php if (empty($groups)): ?>
-        <div class="empty-state">
-            <?= $is_filtered ? 'No files match your filters.' : 'No files have been sent yet.' ?>
-        </div>
-    <?php endif; ?>
-
-    <?php foreach ($groups as $crumb => $rows): ?>
-        <section class="file-group">
-            <h3 class="group-heading">
-                <span><?= htmlspecialchars($crumb) ?></span>
-                <span class="group-count"><?= count($rows) ?> file(s)</span>
-            </h3>
-
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>File</th>
-                        <th>Category</th>
-                        <th>Sent by</th>
-                        <th>Status</th>
-                        <th>Date</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($rows as $f): ?>
-                        <tr>
-                            <td><?= htmlspecialchars(display_name($f['file_path'])) ?></td>
-                            <td><?= htmlspecialchars($f['category_name'] ?? '—') ?></td>
-                            <td><?= htmlspecialchars($f['uploaded_by']) ?></td>
-                            <td>
-                                <span class="badge badge-status-<?= htmlspecialchars($f['status']) ?>">
-                                    <?= htmlspecialchars(status_label($f['status'])) ?>
-                                </span>
-                                <?php if ($f['is_archived']): ?>
-                                    <span class="badge badge-archived">Archived</span>
-                                <?php endif; ?>
-                            </td>
-                            <td><?= date('M d, Y h:i A', strtotime($f['created_at'])) ?></td>
-                            <td class="actions-cell">
-                                <a href="../download.php?id=<?= (int)$f['file_id'] ?>" class="btn-small btn-download">Download</a>
-                            </td>
-                        </tr>
+        <form method="GET" action="files.php" class="filter-bar">
+            <div class="filter-field">
+                <label for="program">Program / Office</label>
+                <select name="program" id="program">
+                    <option value="0">All</option>
+                    <?php foreach ($program_options as $id => $label): ?>
+                        <option value="<?= $id ?>" <?= $filter_program === $id ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($label) ?>
+                        </option>
                     <?php endforeach; ?>
-                </tbody>
-            </table>
-        </section>
-    <?php endforeach; ?>
-</main>
+                </select>
+            </div>
+
+            <div class="filter-field">
+                <label for="status">Status</label>
+                <select name="status" id="status">
+                    <option value="">All</option>
+                    <?php foreach (file_statuses() as $s): ?>
+                        <option value="<?= $s ?>" <?= $filter_status === $s ? 'selected' : '' ?>>
+                            <?= htmlspecialchars(status_label($s)) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <div class="filter-field">
+                <label for="q">File name</label>
+                <input type="text" name="q" id="q" value="<?= htmlspecialchars($search) ?>" placeholder="Search...">
+            </div>
+
+            <div class="filter-field">
+                <span class="filter-spacer" aria-hidden="true">&nbsp;</span>
+                <label class="check-label">
+                    <input type="checkbox" name="archived" id="archived" value="1" <?= $show_archived ? 'checked' : '' ?>>
+                    Include archived versions
+                </label>
+            </div>
+
+            <button type="submit">Filter</button>
+            <?php if ($is_filtered): ?>
+                <a href="files.php" class="btn-reset">Reset</a>
+            <?php endif; ?>
+        </form>
+
+        <?php if (empty($groups)): ?>
+            <div class="empty-state">
+                <?= $is_filtered ? 'No files match your filters.' : 'No files have been sent yet.' ?>
+            </div>
+        <?php endif; ?>
+
+        <?php foreach ($groups as $crumb => $rows): ?>
+            <section class="file-group">
+                <h3 class="group-heading">
+                    <span><?= htmlspecialchars($crumb) ?></span>
+                    <span class="group-count"><?= count($rows) ?> file(s)</span>
+                </h3>
+
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>File</th>
+                            <th>Category</th>
+                            <th>Sent by</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($rows as $f): ?>
+                            <tr>
+                                <td><?= htmlspecialchars(display_name($f['file_path'])) ?></td>
+                                <td><?= htmlspecialchars($f['category_name'] ?? '—') ?></td>
+                                <td><?= htmlspecialchars($f['uploaded_by']) ?></td>
+                                <td>
+                                    <span class="badge badge-status-<?= htmlspecialchars($f['status']) ?>">
+                                        <?= htmlspecialchars(status_label($f['status'])) ?>
+                                    </span>
+                                    <?php if ($f['is_archived']): ?>
+                                        <span class="badge badge-archived">Archived</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td><?= date('M d, Y h:i A', strtotime($f['created_at'])) ?></td>
+                                <td class="actions-cell">
+                                    <a href="../download.php?id=<?= (int)$f['file_id'] ?>" class="btn-small btn-download">Download</a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </section>
+        <?php endforeach; ?>
+    </main>
 
 </body>
+
 </html>
