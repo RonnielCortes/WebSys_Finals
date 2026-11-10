@@ -14,6 +14,7 @@ if (isset($conn)) {
         <?= nav_link('/websys/admin/dashboard.php', 'dashboard', 'Dashboard', $active_page === 'dashboard') ?>
         <?= nav_link('/websys/admin/manage_accounts.php', 'accounts', 'Manage Accounts', $active_page === 'accounts', $pending_bubble) ?>
         <?= nav_link('/websys/admin/files.php', 'files', 'Files', $active_page === 'files') ?>
+        <?= nav_link('/websys/admin/archive.php', 'archive', 'Archived Files', $active_page === 'archive') ?>
     </nav>
     <?= sidebar_user($conn ?? null) ?>
 </aside>

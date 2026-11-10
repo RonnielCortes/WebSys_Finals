@@ -58,7 +58,7 @@ try {
     $stmt->close();
 
     $action  = 'deleted_by_program';
-    $remarks = $file['status'] === 'need_revision' ? "Withdraw by the program after QA sent it back" : "Withdraw by the program before QA review"; 
+    $remarks = $file['status'] === 'needs_revision' ? "Withdrawn by the program after QA sent it back" : "Withdrawn by the program before QA review";
     $stmt = $conn->prepare(
         "INSERT INTO file_logs (file_id, action, performed_by, remarks) VALUES (?, ?, ?, ?)"
     );
