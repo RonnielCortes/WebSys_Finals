@@ -19,7 +19,8 @@ $action   = $_POST['action'] ?? '';
 $admin_id = (int)$_SESSION['user_id'];
 
 // Where to go afterwards: the admin dashboard, or back to the same tab/search
-function accounts_redirect($flash) {
+function accounts_redirect($flash)
+{
     if (($_POST['return'] ?? '') === 'dashboard') {
         $url = 'dashboard.php';
         $qs  = '';
@@ -50,7 +51,10 @@ if ($user_id === $admin_id && in_array($action, ['reject', 'deactivate'], true))
 
 try {
     // current state of the target account
-    $stmt = $conn->prepare("SELECT account_status, is_active FROM users WHERE user_id = ?");
+    $stmt = $conn->prepare(
+        "SELECT u.account_status, u.is_active, u.program_id, r.role_name
+         FROM users u JOIN roles r ON u.role_id = r.role_id WHERE u.user_id = ?"
+    );
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
     $target = $stmt->get_result()->fetch_assoc();
@@ -64,6 +68,11 @@ try {
     switch ($action) {
         case 'approve':   // pending -> approved, or a rejected account the Admin changed their mind about
             if (!in_array($status, ['pending', 'rejected'], true)) accounts_redirect('invalid');
+            // A Program user who picked "Other" has no folder yet: the Admin must assign one first
+            if ($target['role_name'] === 'program' && empty($target['program_id'])) {
+                header("Location: manage_accounts.php?tab=pending&flash=needs_program");
+                exit();
+            }
             $stmt = $conn->prepare("UPDATE users SET account_status = 'approved', approved_by = ? WHERE user_id = ?");
             $stmt->bind_param("ii", $admin_id, $user_id);
             $flash = 'approved';
@@ -93,7 +102,6 @@ try {
 
     $stmt->execute();
     $stmt->close();
-
 } catch (Throwable $e) {
     accounts_redirect('invalid');
 }

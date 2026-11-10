@@ -24,7 +24,7 @@ $csrf = $_SESSION['csrf'];
 
 // The account being edited
 $stmt = $conn->prepare(
-    "SELECT u.username, u.full_name, u.email, u.program_id, r.role_name
+    "SELECT u.username, u.full_name, u.email, u.program_id, u.requested_unit, r.role_name
      FROM users u
      JOIN roles r ON u.role_id = r.role_id
      WHERE u.user_id = ?"
@@ -95,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $params = [$full_name, $email];
 
                 if ($is_program_user) {
-                    $sql .= ", program_id = ?";
+                    $sql .= ", program_id = ?, requested_unit = NULL";
                     $types .= "i";
                     $params[] = $program_id;
                 }
@@ -173,6 +173,9 @@ $role_text = ($user['role_name'] === 'qa') ? 'QA' : ucfirst($user['role_name']);
                     </option>
                 <?php endforeach; ?>
             </select>
+            <?php if (!empty($user['requested_unit']) && empty($user['program_id'])): ?>
+                <small class="muted"><strong>The user typed:</strong> &ldquo;<?= htmlspecialchars($user['requested_unit']) ?>&rdquo;. Pick the matching folder. If it isn't in the list, ask QA to add it in Folders first.</small>
+            <?php endif; ?>
             <small class="muted">If you change this, the user must log out and log in again for it to take effect.</small>
         <?php endif; ?>
 
@@ -204,4 +207,3 @@ $role_text = ($user['role_name'] === 'qa') ? 'QA' : ucfirst($user['role_name']);
 //dapat maganda
 //dapat ginagawa qa is pwede syang gumawa ng files for the program/employees
 //pano kapag dalawa role nya for example VPA tapos dean sya ng cet
-

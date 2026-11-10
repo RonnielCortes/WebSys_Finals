@@ -48,7 +48,7 @@ if (!in_array($role_filter, $roles, true)) {
 $search = trim($_GET['q'] ?? '');
 
 $sql = "SELECT u.user_id, u.username, u.full_name, u.email, u.account_status, u.is_active,
-               r.role_name, p.program_name
+               u.requested_unit, r.role_name, p.program_name
         FROM users u
         JOIN roles r ON u.role_id = r.role_id
         LEFT JOIN programs p ON u.program_id = p.program_id
@@ -143,6 +143,8 @@ function account_action_form($user_id, $action, $label, $class, $back, $confirm 
         <div class="alert alert-success">Account updated.</div>
     <?php elseif ($flash === 'cannot_self_deactivate'): ?>
         <div class="alert alert-error">You can't reject or deactivate your own account.</div>
+    <?php elseif ($flash === 'needs_program'): ?>
+        <div class="alert alert-error">This user typed their own program/office. Click Edit and choose a folder for them first, then approve.</div>
     <?php elseif ($flash === 'invalid'): ?>
         <div class="alert alert-error">That action isn't possible for this account anymore. The page was refreshed.</div>
     <?php endif; ?>
@@ -210,7 +212,16 @@ function account_action_form($user_id, $action, $label, $class, $back, $confirm 
                         </td>
                         <td><?= htmlspecialchars($u['email']) ?></td>
                         <td><span class="badge badge-role"><?= htmlspecialchars(account_role_label($u['role_name'])) ?></span></td>
-                        <td><?= htmlspecialchars($u['program_name'] ?? '—') ?></td>
+                        <td>
+                            <?php if ($u['program_name']): ?>
+                                <?= htmlspecialchars($u['program_name']) ?>
+                            <?php elseif ($u['role_name'] === 'program' && $u['requested_unit']): ?>
+                                <em>Other: <?= htmlspecialchars($u['requested_unit']) ?></em>
+                                <br><small class="muted">Needs a folder &mdash; use Edit</small>
+                            <?php else: ?>
+                                —
+                            <?php endif; ?>
+                        </td>
                         <td>
                             <span class="badge badge-<?= htmlspecialchars($u['account_status']) ?>">
                                 <?= htmlspecialchars(ucfirst($u['account_status'])) ?>

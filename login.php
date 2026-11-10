@@ -77,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
 <div class="auth-split">
 <div class="auth-form-panel">
-    <div class="info-badge">QADMS</div>
+    <div class="info-badge">Quality Assurance Document Management System</div>
     <h2>Welcome back</h2>
     <p class="form-sub">Please enter your account details.</p>
 

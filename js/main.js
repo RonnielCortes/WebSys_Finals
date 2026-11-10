@@ -10,6 +10,23 @@ function toggleProgramField() {
     if (!roleField || !programField) return;
 
     programField.style.display = (roleField.value === 'program') ? 'block' : 'none';
+    toggleOtherField();
+}
+
+// Shows the "type your program/office/position" box when "Other" is picked.
+function toggleOtherField() {
+    const roleField = document.getElementById('role');
+    const unit = document.getElementById('program_id');
+    const otherField = document.getElementById('other-field');
+    const otherInput = document.getElementById('other_unit');
+    if (!unit || !otherField) return;
+
+    const show = roleField && roleField.value === 'program' && unit.value === 'other';
+    otherField.style.display = show ? 'block' : 'none';
+    if (otherInput) {
+        otherInput.required = show;
+        if (!show) otherInput.value = '';
+    }
 }
 
 // Simple client-side check: password and confirm-password must match

@@ -11,6 +11,8 @@ $programs_result = $conn->query(
      WHERE level IN ('program', 'office')
      ORDER BY level, program_name"
 );
+$unit_rows = $programs_result ? $programs_result->fetch_all(MYSQLI_ASSOC) : [];
+$unit_ids  = array_map('intval', array_column($unit_rows, 'program_id'));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $full_name = trim($_POST['full_name'] ?? '');
@@ -18,16 +20,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email    = trim($_POST['email']);
     $password = $_POST['password'];
     $confirm  = $_POST['confirm_password'];
-    $role     = $_POST['role']; // 'qa' or 'program'
-    $program_id = ($role === 'program' && !empty($_POST['program_id']))
-        ? (int)$_POST['program_id']
-        : null;
+    $role     = $_POST['role'] ?? ''; // 'qa' or 'program'
+
+    // Program / Office: one from the list, or "other" + what the user typed
+    $program_raw    = $_POST['program_id'] ?? '';
+    $other_text     = trim(preg_replace('/\s+/', ' ', (string)($_POST['other_unit'] ?? '')));
+    $program_id     = null;
+    $requested_unit = null;
+    if ($role === 'program') {
+        if ($program_raw === 'other') {
+            $requested_unit = $other_text;
+        } elseif (in_array((int)$program_raw, $unit_ids, true)) {
+            $program_id = (int)$program_raw;
+        }
+    }
 
     if ($full_name === '' || $username === '' || $email === '' || $password === '') {
         $error = "Please fill out all required fields.";
     } elseif ($password !== $confirm) {
         $error = "Passwords do not match.";
-    } elseif ($role === 'program' && !$program_id) {
+    } elseif (!in_array($role, ['qa', 'program'], true)) {
+        $error = "Please choose an account type.";
+    } elseif ($role === 'program' && $program_raw === 'other' && mb_strlen($requested_unit) < 2) {
+        $error = "Please type your program, office or position.";
+    } elseif ($role === 'program' && $program_raw === 'other'
+            && (mb_strlen($requested_unit) > 100 || !preg_match('/^[\p{L}\p{N} .,&()\/\'-]+$/u', $requested_unit))) {
+        $error = "Your program/office/position is too long (100 max) or has a character that isn't allowed.";
+    } elseif ($role === 'program' && $program_raw !== 'other' && !$program_id) {
         $error = "Please select your program/office.";
     } else {
         // Check if username or email already exists
@@ -50,10 +69,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
             $insert = $conn->prepare(
-                "INSERT INTO users (username, full_name, email, password, role_id, program_id, account_status)
-                 VALUES (?, ?, ?, ?, ?, ?, 'pending')"
+                "INSERT INTO users (username, full_name, email, password, role_id, program_id, requested_unit, account_status)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')"
             );
-            $insert->bind_param("ssssii", $username, $full_name, $email, $hashed_password, $role_id, $program_id);
+            $insert->bind_param("ssssiis", $username, $full_name, $email, $hashed_password, $role_id, $program_id, $requested_unit);
 
             if ($insert->execute()) {
                 $success = "Account created! Please wait for an Admin to approve your account before logging in.";
@@ -138,17 +157,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <div id="program-field" style="display:none;">
                     <label>Program / Office</label>
-                    <select name="program_id">
+                    <select name="program_id" id="program_id" onchange="toggleOtherField()">
                         <option value="">-- Select your program/office --</option>
-                        <?php if (isset($programs_result)): ?>
-                            <?php while ($row = $programs_result->fetch_assoc()): ?>
-                                <option value="<?= $row['program_id'] ?>">
-                                    <?= htmlspecialchars($row['program_name']) ?>
-                                    (<?= htmlspecialchars($row['level']) ?>)
-                                </option>
-                            <?php endwhile; ?>
-                        <?php endif; ?>
+                        <?php foreach ($unit_rows as $row): ?>
+                            <option value="<?= (int)$row['program_id'] ?>">
+                                <?= htmlspecialchars($row['program_name']) ?>
+                                (<?= htmlspecialchars($row['level']) ?>)
+                            </option>
+                        <?php endforeach; ?>
+                        <option value="other">Other (not in the list)</option>
                     </select>
+
+                    <div id="other-field" style="display:none;">
+                        <label>Your program, office or position</label>
+                        <input type="text" name="other_unit" id="other_unit" maxlength="100" placeholder="e.g. Library, Guidance Office">
+                        <small class="muted">An admin will place you in the right folder when approving your account.</small>
+                    </div>
                 </div>
 
                 <button type="submit">Register</button>
