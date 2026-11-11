@@ -24,7 +24,7 @@ $csrf = $_SESSION['csrf'];
 
 // The account being edited
 $stmt = $conn->prepare(
-    "SELECT u.username, u.full_name, u.email, u.program_id, u.requested_unit, r.role_name
+    "SELECT u.username, u.full_name, u.email, u.program_id, r.role_name
      FROM users u
      JOIN roles r ON u.role_id = r.role_id
      WHERE u.user_id = ?"
@@ -40,15 +40,9 @@ if (!$user) {
 }
 $is_program_user = ($user['role_name'] === 'program');
 
-// The units a Program user can belong to (same list as the register page)
-$units = [];
-$res = $conn->query(
-    "SELECT program_id, program_name, level FROM programs
-     WHERE level IN ('program', 'office') ORDER BY level, program_name"
-);
-while ($row = $res->fetch_assoc()) {
-    $units[(int)$row['program_id']] = $row;
-}
+// The programs/offices a Program user can belong to (same list as the register page)
+$programs       = load_programs($conn);
+$selected_units = $is_program_user ? load_user_program_ids($conn, $user_id) : [];
 
 $error = "";
 
@@ -57,13 +51,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email        = trim($_POST['email'] ?? '');
     $new_password = $_POST['new_password'] ?? '';
     $confirm      = $_POST['confirm_password'] ?? '';
-    $program_id   = $is_program_user ? (int)($_POST['program_id'] ?? 0) : null;
+    $posted_units = $is_program_user
+        ? array_values(array_unique(array_map('intval', (array)($_POST['units'] ?? []))))
+        : [];
+    $program_id   = $posted_units ? $posted_units[0] : null;   // users.program_id keeps the first one
 
     // keep what was typed if there is an error
     $user['full_name'] = $full_name;
     $user['email']     = $email;
     if ($is_program_user) {
-        $user['program_id'] = $program_id;
+        $selected_units = $posted_units;
     }
 
     if (!hash_equals($csrf, (string)($_POST['csrf'] ?? ''))) {
@@ -74,8 +71,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = "Email cannot be blank.";
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL) || mb_strlen($email) > 100) {
         $error = "Please enter a valid email address.";
-    } elseif ($is_program_user && !isset($units[$program_id])) {
-        $error = "Please choose a program/office.";
+    } elseif ($is_program_user && !$posted_units) {
+        $error = "Please tick at least one program/office.";
+    } elseif ($is_program_user && array_diff($posted_units, array_keys($programs))) {
+        $error = "One of the programs/offices you ticked doesn't exist.";
     } elseif ($new_password !== '' && strlen($new_password) < 8) {
         $error = "The new password must be at least 8 characters.";
     } elseif ($new_password !== $confirm) {
@@ -97,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $params = [$full_name, $email];
 
                 if ($is_program_user) {
-                    $sql .= ", program_id = ?, requested_unit = NULL";
+                    $sql .= ", program_id = ?";
                     $types .= "i";
                     $params[] = $program_id;
                 }
@@ -114,6 +113,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->bind_param($types, ...$params);
                 $stmt->execute();
                 $stmt->close();
+
+                if ($is_program_user) {
+                    // replace the list of programs/offices
+                    $stmt = $conn->prepare("DELETE FROM user_programs WHERE user_id = ?");
+                    $stmt->bind_param("i", $user_id);
+                    $stmt->execute();
+                    $stmt->close();
+                    foreach ($posted_units as $uid) {
+                        $stmt = $conn->prepare("INSERT INTO user_programs (user_id, program_id) VALUES (?, ?)");
+                        $stmt->bind_param("ii", $user_id, $uid);
+                        $stmt->execute();
+                        $stmt->close();
+                    }
+                }
 
                 header("Location: manage_accounts.php?flash=updated");
                 exit();
@@ -168,19 +181,9 @@ $role_text = ($user['role_name'] === 'qa') ? 'QA' : ucfirst($user['role_name']);
                     <input type="email" name="email" id="email" maxlength="100" value="<?= htmlspecialchars($user['email'] ?? '') ?>" required>
 
                     <?php if ($is_program_user): ?>
-                        <label for="program_id">Program / Office</label>
-                        <select name="program_id" id="program_id" required>
-                            <option value="">-- Select program/office --</option>
-                            <?php foreach ($units as $id => $u): ?>
-                                <option value="<?= $id ?>" <?= (int)$user['program_id'] === $id ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($u['program_name']) ?> (<?= htmlspecialchars($u['level']) ?>)
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <?php if (!empty($user['requested_unit']) && empty($user['program_id'])): ?>
-                            <small class="muted"><strong>The user typed:</strong> &ldquo;<?= htmlspecialchars($user['requested_unit']) ?>&rdquo;. Pick the matching folder. If it isn't in the list, ask QA to add it in Folders first.</small>
-                        <?php endif; ?>
-                        <small class="muted">If you change this, the user must log out and log in again for it to take effect.</small>
+                        <label>Programs / Offices</label>
+                        <?= render_unit_picker($programs, $selected_units) ?>
+                        <small class="muted">Tick all that apply. If you change this, the user must log out and log in again for it to take effect.</small>
                     <?php endif; ?>
 
                     <label for="new_password">New password <span class="muted">(optional)</span></label>
@@ -201,6 +204,7 @@ $role_text = ($user['role_name'] === 'qa') ? 'QA' : ucfirst($user['role_name']);
         </div>
     </main>
 
+<script src="../js/main.js?v=<?= @filemtime(__DIR__ . '/../js/main.js') ?>"></script>
 </body>
 
 </html>

@@ -18,23 +18,25 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $user_id    = (int)$_SESSION['user_id'];
-$program_id = (int)($_SESSION['program_id'] ?? 0);
+$unit_ids   = session_program_ids();
+$unit_list  = id_list($unit_ids);          // integers only, safe inside IN (...)
 $file_id    = (int)($_POST['file_id'] ?? 0);
 
-if (!$program_id || !$file_id) {
+if (!$unit_ids || !$file_id) {
     header("Location: dashboard.php?flash=cannot_delete");
     exit();
 }
 
 // The file must belong to THIS program
 $stmt = $conn->prepare(
-    "SELECT file_id, file_path, status, is_archived
-     FROM files WHERE file_id = ? AND program_id = ?"
+    "SELECT file_id, file_path, status, is_archived, program_id
+     FROM files WHERE file_id = ? AND program_id IN ($unit_list)"
 );
-$stmt->bind_param("ii", $file_id, $program_id);
+$stmt->bind_param("i", $file_id);
 $stmt->execute();
 $file = $stmt->get_result()->fetch_assoc();
 $stmt->close();
+$program_id = $file ? (int)$file['program_id'] : 0;
 
 if (!$file || $file['is_archived'] || !program_can_delete($file['status'])) {
     header("Location: dashboard.php?flash=cannot_delete");

@@ -10,24 +10,8 @@ function toggleProgramField() {
     if (!roleField || !programField) return;
 
     programField.style.display = (roleField.value === 'program') ? 'block' : 'none';
-    toggleOtherField();
 }
 
-// Shows the "type your program/office/position" box when "Other" is picked.
-function toggleOtherField() {
-    const roleField = document.getElementById('role');
-    const unit = document.getElementById('program_id');
-    const otherField = document.getElementById('other-field');
-    const otherInput = document.getElementById('other_unit');
-    if (!unit || !otherField) return;
-
-    const show = roleField && roleField.value === 'program' && unit.value === 'other';
-    otherField.style.display = show ? 'block' : 'none';
-    if (otherInput) {
-        otherInput.required = show;
-        if (!show) otherInput.value = '';
-    }
-}
 
 // Simple client-side check: password and confirm-password must match
 // before the register form is allowed to submit.
@@ -39,6 +23,13 @@ function validateRegisterForm() {
 
     if (password.value !== confirm.value) {
         alert('Passwords do not match.');
+        return false;
+    }
+
+    // a Program user must tick at least one program/office
+    const role = document.getElementById('role');
+    if (role && role.value === 'program' && !document.querySelector('[data-unit-picker] input[type="checkbox"]:checked')) {
+        alert('Please tick at least one program/office.');
         return false;
     }
     return true;
@@ -128,3 +119,40 @@ document.addEventListener('submit', function (e) {
         );
     }
 });
+
+// ============================================
+// Program / Office check-list with a search box (Register, Admin > Edit Account)
+// ============================================
+(function () {
+    document.querySelectorAll('[data-unit-picker]').forEach(function (box) {
+        var search = box.querySelector('.unit-search');
+        var items  = box.querySelectorAll('.unit-item');
+        var groups = box.querySelectorAll('.unit-group');
+        var empty  = box.querySelector('.unit-empty');
+        var count  = box.querySelector('[data-unit-count]');
+
+        function updateCount() {
+            if (count) count.textContent = box.querySelectorAll('input[type="checkbox"]:checked').length;
+        }
+
+        function filter() {
+            var q = search.value.trim().toLowerCase();
+            var shown = 0;
+            items.forEach(function (it) {
+                var ok = q === '' || it.getAttribute('data-text').indexOf(q) !== -1;
+                it.hidden = !ok;
+                if (ok) shown++;
+            });
+            groups.forEach(function (g) {
+                g.hidden = !g.querySelector('.unit-item:not([hidden])');
+            });
+            if (empty) empty.hidden = shown !== 0;
+        }
+
+        search.addEventListener('input', filter);
+        // Enter in the search box must not submit the form
+        search.addEventListener('keydown', function (e) { if (e.key === 'Enter') e.preventDefault(); });
+        box.addEventListener('change', updateCount);
+        updateCount();
+    });
+})();

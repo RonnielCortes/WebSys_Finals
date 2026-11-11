@@ -47,6 +47,105 @@ function program_breadcrumb($programs, $program_id)
 }
 
 /**
+ * The programs/offices a Program user belongs to (one person can have several,
+ * e.g. a VPA who is also the Dean of a department).
+ * Filled at login from the user_programs table.
+ */
+function session_program_ids()
+{
+    $ids = $_SESSION['program_ids'] ?? [];
+    if (!$ids && !empty($_SESSION['program_id'])) {
+        $ids = [(int)$_SESSION['program_id']];   // session from before multi-program existed
+    }
+    return array_values(array_unique(array_map('intval', (array)$ids)));
+}
+
+/** Loads one user's program/office ids from the database. */
+function load_user_program_ids($conn, $user_id)
+{
+    $ids  = [];
+    $stmt = $conn->prepare("SELECT program_id FROM user_programs WHERE user_id = ? ORDER BY program_id");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    while ($r = $res->fetch_assoc()) { $ids[] = (int)$r['program_id']; }
+    $stmt->close();
+
+    if (!$ids) {   // account made before user_programs existed
+        $stmt = $conn->prepare("SELECT program_id FROM users WHERE user_id = ? AND program_id IS NOT NULL");
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+        $r = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if ($r) { $ids[] = (int)$r['program_id']; }
+    }
+    return $ids;
+}
+
+/** [1, 5, 7] -> "1,5,7" for an SQL IN (...) list (integers only, so it is safe). */
+function id_list($ids)
+{
+    $ids = array_values(array_unique(array_map('intval', (array)$ids)));
+    return $ids ? implode(',', $ids) : '0';
+}
+
+/** id => name for some programs/offices. */
+function program_names($conn, $ids)
+{
+    $out = [];
+    $res = $conn->query("SELECT program_id, program_name FROM programs WHERE program_id IN (" . id_list($ids) . ") ORDER BY program_name");
+    while ($r = $res->fetch_assoc()) { $out[(int)$r['program_id']] = $r['program_name']; }
+    return $out;
+}
+
+/**
+ * The searchable check-list used on Register and Edit Account.
+ * Departments/offices are listed apart from programs.
+ * $programs = load_programs(), $selected = ids that start ticked.
+ */
+function render_unit_picker($programs, $selected = [])
+{
+    $selected = array_map('intval', (array)$selected);
+    $groups = [
+        'Departments & Offices' => [],
+        'Programs'              => [],
+    ];
+    foreach ($programs as $id => $p) {
+        $key = ($p['level'] === 'program') ? 'Programs' : 'Departments & Offices';
+        $groups[$key][$id] = $p;
+    }
+    foreach ($groups as $k => $g) {
+        uasort($g, function ($a, $b) { return strcasecmp($a['program_name'], $b['program_name']); });
+        $groups[$k] = $g;
+    }
+
+    ob_start(); ?>
+    <div class="unit-picker" data-unit-picker>
+        <input type="search" class="unit-search" placeholder="Search department, office or program..." autocomplete="off" aria-label="Search">
+        <div class="unit-list">
+            <?php foreach ($groups as $title => $list): if (!$list) continue; ?>
+                <div class="unit-group">
+                    <div class="unit-group-title"><?= htmlspecialchars($title) ?></div>
+                    <?php foreach ($list as $id => $p):
+                        $where = $p['parent_id'] ? program_breadcrumb($programs, (int)$p['parent_id']) : '';
+                    ?>
+                        <label class="unit-item" data-text="<?= htmlspecialchars(mb_strtolower($p['program_name'] . ' ' . $where)) ?>">
+                            <input type="checkbox" name="units[]" value="<?= (int)$id ?>" <?= in_array((int)$id, $selected, true) ? 'checked' : '' ?>>
+                            <span class="unit-name"><?= htmlspecialchars($p['program_name']) ?></span>
+                            <?php if ($where): ?><small><?= htmlspecialchars($where) ?></small><?php endif; ?>
+                        </label>
+                    <?php endforeach; ?>
+                </div>
+            <?php endforeach; ?>
+            <div class="unit-empty" hidden>Nothing matches your search.</div>
+        </div>
+        <div class="unit-count"><span data-unit-count>0</span> selected</div>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+
+/**
  * Whether the logged-in user is allowed to see/download a file
  * that belongs to $file_program_id.
  *   admin, qa -> every file
@@ -60,8 +159,7 @@ function can_access_file($file_program_id)
         return true;
     }
     if ($role === 'program') {
-        return isset($_SESSION['program_id'])
-            && (int)$_SESSION['program_id'] === (int)$file_program_id;
+        return in_array((int)$file_program_id, session_program_ids(), true);
     }
     return false;
 }

@@ -1361,3 +1361,41 @@ input.has-error { border-color: #dc2626 !important; }
     line-height: 1.45;
     letter-spacing: 0.4px;
 }
+/* ============================================
+   Program / Office check-list with search (register + admin edit account)
+   ============================================ */
+.unit-picker { margin-top: 8px; }
+.unit-picker .unit-search {
+    width: 100%; box-sizing: border-box;
+    padding: 10px 16px; margin: 0 0 8px;
+    border: 1px solid #ddd6fe; border-radius: 999px;
+    background: #fff; color: #2e1065; font-size: 14px;
+}
+.unit-picker .unit-search:focus { outline: none; border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2); }
+
+.unit-list {
+    max-height: 230px; overflow-y: auto;
+    border: 1px solid #ddd6fe; border-radius: 14px; background: #fff;
+    padding: 4px 6px;
+}
+.unit-group-title {
+    position: sticky; top: 0; z-index: 1;
+    padding: 8px 8px 4px; background: #fff;
+    font-size: 11px; font-weight: bold; letter-spacing: 0.6px; text-transform: uppercase; color: #8b7bb5;
+}
+.unit-item {
+    display: flex; align-items: center; gap: 10px;
+    margin: 0 !important; padding: 8px 10px;
+    border-radius: 10px; cursor: pointer;
+    color: #2e1065; font-size: 14px; font-weight: normal;
+}
+.unit-item:hover { background: #f5f3ff; }
+.unit-item[hidden], .unit-group[hidden], .unit-empty[hidden] { display: none; }
+.unit-picker .unit-item input[type="checkbox"] {
+    width: 18px; height: 18px; min-width: 18px; padding: 0; margin: 0;
+    border-radius: 4px; accent-color: #6d28d9; box-shadow: none;
+}
+.unit-item .unit-name { font-weight: bold; }
+.unit-item small { margin-left: auto; color: #8b7bb5; font-size: 12px; text-align: right; }
+.unit-empty { padding: 14px; text-align: center; color: #8b7bb5; font-size: 13px; }
+.unit-count { margin-top: 6px; font-size: 12px; color: #6b5b8c; }

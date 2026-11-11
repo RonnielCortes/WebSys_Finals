@@ -188,15 +188,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // ---- the program/office name (Program users only) ----
-$program_name = '';
+$program_names = [];
 if (!empty($user['program_id'])) {
-    $stmt = $conn->prepare("SELECT program_name FROM programs WHERE program_id = ?");
-    $pid = (int)$user['program_id'];
-    $stmt->bind_param("i", $pid);
-    $stmt->execute();
-    $row = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
-    $program_name = $row['program_name'] ?? '';
+    $program_names = array_values(program_names($conn, load_user_program_ids($conn, $user_id)));
 }
 
 $display = $user['full_name'] ?: $user['username'];
@@ -274,7 +268,7 @@ $flash_text = [
                 <p class="acct-email"><?= htmlspecialchars($user['email'] ?? '') ?></p>
                 <div class="acct-chips">
                     <span class="acct-chip"><?= htmlspecialchars($role_labels[$role] ?? ucfirst($role)) ?></span>
-                    <?php if ($program_name): ?><span class="acct-chip"><?= htmlspecialchars($program_name) ?></span><?php endif; ?>
+                    <?php foreach ($program_names as $pn): ?><span class="acct-chip"><?= htmlspecialchars($pn) ?></span><?php endforeach; ?>
                     <span class="acct-chip good">Active</span>
                 </div>
                 <p class="acct-since">@<?= htmlspecialchars($user['username']) ?> &middot; Member since <?= date('M d, Y', strtotime($user['created_at'])) ?></p>

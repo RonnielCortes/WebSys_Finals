@@ -1,18 +1,11 @@
 <?php
 require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/includes/helpers.php';
 
 $error = "";
 $success = "";
 
-// Fetch only the "leaf" programs/offices — the specific units a Program user
-// can actually be assigned to (e.g. BSIT, BEED, Accounting, Registrar)
-$programs_result = $conn->query(
-    "SELECT program_id, program_name, level FROM programs
-     WHERE level IN ('program', 'office')
-     ORDER BY level, program_name"
-);
-$unit_rows = $programs_result ? $programs_result->fetch_all(MYSQLI_ASSOC) : [];
-$unit_ids  = array_map('intval', array_column($unit_rows, 'program_id'));
+$programs = load_programs($conn);   // every folder: departments, offices, programs
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $full_name = trim($_POST['full_name'] ?? '');
@@ -22,18 +15,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $confirm  = $_POST['confirm_password'];
     $role     = $_POST['role'] ?? ''; // 'qa' or 'program'
 
-    // Program / Office: one from the list, or "other" + what the user typed
-    $program_raw    = $_POST['program_id'] ?? '';
-    $other_text     = trim(preg_replace('/\s+/', ' ', (string)($_POST['other_unit'] ?? '')));
-    $program_id     = null;
-    $requested_unit = null;
-    if ($role === 'program') {
-        if ($program_raw === 'other') {
-            $requested_unit = $other_text;
-        } elseif (in_array((int)$program_raw, $unit_ids, true)) {
-            $program_id = (int)$program_raw;
-        }
-    }
+    // A Program user ticks one or more programs/offices (e.g. a VPA who is also a Dean)
+    $picked = array_values(array_unique(array_map('intval', (array)($_POST['units'] ?? []))));
+    $units  = ($role === 'program') ? $picked : [];
+    $program_id = $units ? $units[0] : null;   // users.program_id keeps the first one
 
     if ($full_name === '' || $username === '' || $email === '' || $password === '') {
         $error = "Please fill out all required fields.";
@@ -41,13 +26,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = "Passwords do not match.";
     } elseif (!in_array($role, ['qa', 'program'], true)) {
         $error = "Please choose an account type.";
-    } elseif ($role === 'program' && $program_raw === 'other' && mb_strlen($requested_unit) < 2) {
-        $error = "Please type your program, office or position.";
-    } elseif ($role === 'program' && $program_raw === 'other'
-            && (mb_strlen($requested_unit) > 100 || !preg_match('/^[\p{L}\p{N} .,&()\/\'-]+$/u', $requested_unit))) {
-        $error = "Your program/office/position is too long (100 max) or has a character that isn't allowed.";
-    } elseif ($role === 'program' && $program_raw !== 'other' && !$program_id) {
-        $error = "Please select your program/office.";
+    } elseif ($role === 'program' && !$units) {
+        $error = "Please tick at least one program/office.";
+    } elseif ($role === 'program' && array_diff($units, array_keys($programs))) {
+        $error = "One of the programs/offices you ticked doesn't exist.";
     } else {
         // Check if username or email already exists
         $check = $conn->prepare("SELECT user_id FROM users WHERE username = ? OR email = ?");
@@ -68,18 +50,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
-            $insert = $conn->prepare(
-                "INSERT INTO users (username, full_name, email, password, role_id, program_id, requested_unit, account_status)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')"
-            );
-            $insert->bind_param("ssssiis", $username, $full_name, $email, $hashed_password, $role_id, $program_id, $requested_unit);
+            try {
+                $conn->begin_transaction();
 
-            if ($insert->execute()) {
+                $insert = $conn->prepare(
+                    "INSERT INTO users (username, full_name, email, password, role_id, program_id, account_status)
+                     VALUES (?, ?, ?, ?, ?, ?, 'pending')"
+                );
+                $insert->bind_param("ssssii", $username, $full_name, $email, $hashed_password, $role_id, $program_id);
+                $insert->execute();
+                $new_user_id = (int)$conn->insert_id;
+                $insert->close();
+
+                foreach ($units as $uid) {
+                    $link = $conn->prepare("INSERT INTO user_programs (user_id, program_id) VALUES (?, ?)");
+                    $link->bind_param("ii", $new_user_id, $uid);
+                    $link->execute();
+                    $link->close();
+                }
+
+                $conn->commit();
                 $success = "Account created! Please wait for an Admin to approve your account before logging in.";
-            } else {
+            } catch (Throwable $e) {
+                $conn->rollback();
                 $error = "Something went wrong. Please try again.";
             }
-            $insert->close();
         }
         $check->close();
     }
@@ -157,22 +152,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <div id="program-field" style="display:none;">
                     <label>Program / Office</label>
-                    <select name="program_id" id="program_id" onchange="toggleOtherField()">
-                        <option value="">-- Select your program/office --</option>
-                        <?php foreach ($unit_rows as $row): ?>
-                            <option value="<?= (int)$row['program_id'] ?>">
-                                <?= htmlspecialchars($row['program_name']) ?>
-                                (<?= htmlspecialchars($row['level']) ?>)
-                            </option>
-                        <?php endforeach; ?>
-                        <option value="other">Other (not in the list)</option>
-                    </select>
-
-                    <div id="other-field" style="display:none;">
-                        <label>Your program, office or position</label>
-                        <input type="text" name="other_unit" id="other_unit" maxlength="100" placeholder="e.g. Library, Guidance Office">
-                        <small class="muted">An admin will place you in the right folder when approving your account.</small>
-                    </div>
+                    <small class="muted">Tick all that apply &mdash; you can belong to more than one.</small>
+                    <?= render_unit_picker($programs, $_POST['units'] ?? []) ?>
                 </div>
 
                 <button type="submit">Register</button>

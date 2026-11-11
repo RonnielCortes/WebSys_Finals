@@ -137,7 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $conn->prepare(
                 "SELECT (SELECT COUNT(*) FROM programs WHERE parent_id = ?) AS subs,
                         (SELECT COUNT(*) FROM files    WHERE program_id = ?) AS files,
-                        (SELECT COUNT(*) FROM users    WHERE program_id = ?) AS users"
+                        (SELECT COUNT(*) FROM user_programs WHERE program_id = ?) AS users"
             );
             $stmt->bind_param("iii", $id, $id, $id);
             $stmt->execute();
@@ -176,7 +176,7 @@ $file_n = [];
 $res = $conn->query("SELECT program_id, COUNT(*) AS c FROM files GROUP BY program_id");
 while ($r = $res->fetch_assoc()) { $file_n[(int)$r['program_id']] = (int)$r['c']; }
 $user_n = [];
-$res = $conn->query("SELECT program_id, COUNT(*) AS c FROM users WHERE program_id IS NOT NULL GROUP BY program_id");
+$res = $conn->query("SELECT program_id, COUNT(*) AS c FROM user_programs GROUP BY program_id");
 while ($r = $res->fetch_assoc()) { $user_n[(int)$r['program_id']] = (int)$r['c']; }
 
 // Flat, ordered rows with their depth

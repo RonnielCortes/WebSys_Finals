@@ -6,18 +6,15 @@ require_once __DIR__ . '/../includes/helpers.php';
 
 $active_page = 'files';
 
-$program_id = (int)($_SESSION['program_id'] ?? 0);
-if (!$program_id) {
+// A user can belong to several programs/offices: they see the files of all of them
+$unit_ids = session_program_ids();
+if (!$unit_ids) {
     die("Your account is not assigned to a program/office yet. Please contact the Admin.");
 }
-
-// This program's name (for the heading)
-$stmt = $conn->prepare("SELECT program_name FROM programs WHERE program_id = ?");
-$stmt->bind_param("i", $program_id);
-$stmt->execute();
-$program = $stmt->get_result()->fetch_assoc();
-$stmt->close();
-$program_name = $program['program_name'] ?? 'Your program';
+$unit_list    = id_list($unit_ids);          // integers only, safe inside IN (...)
+$unit_names   = program_names($conn, $unit_ids);
+$multi_unit   = count($unit_ids) > 1;
+$program_name = $unit_names ? implode(', ', $unit_names) : 'Your program';
 
 $flash = $_GET['flash'] ?? '';
 
@@ -25,17 +22,13 @@ $flash = $_GET['flash'] ?? '';
 // Stat cards (current versions only, THIS program only)
 // --------------------------------------------
 $counts = array_fill_keys(file_statuses(), 0);
-$stmt = $conn->prepare(
+$res = $conn->query(
     "SELECT status, COUNT(*) AS c FROM files
-     WHERE program_id = ? AND is_archived = 0 GROUP BY status"
+     WHERE program_id IN ($unit_list) AND is_archived = 0 GROUP BY status"
 );
-$stmt->bind_param("i", $program_id);
-$stmt->execute();
-$res = $stmt->get_result();
 while ($r = $res->fetch_assoc()) {
     $counts[$r['status']] = (int)$r['c'];
 }
-$stmt->close();
 
 $total    = array_sum($counts);
 $waiting  = $counts['sent'] + $counts['received'] + $counts['under_review'];
@@ -54,7 +47,7 @@ if (!in_array($filter_status, file_statuses(), true)) {
 }
 
 // program_id is ALWAYS part of the query: a Program user can never see another program's files
-$sql = "SELECT f.file_id, f.file_path, f.status, f.created_at, f.is_archived,
+$sql = "SELECT f.file_id, f.file_path, f.status, f.created_at, f.is_archived, f.program_id,
                c.category_name,
                COALESCE(u.full_name, u.username) AS sent_by,
                (SELECT l.remarks FROM file_logs l
@@ -63,9 +56,9 @@ $sql = "SELECT f.file_id, f.file_path, f.status, f.created_at, f.is_archived,
         FROM files f
         JOIN users u ON f.uploaded_by = u.user_id
         LEFT JOIN file_categories c ON f.category_id = c.category_id
-        WHERE f.program_id = ?";
-$types  = 'i';
-$params = [$program_id];
+        WHERE f.program_id IN ($unit_list)";
+$types  = '';
+$params = [];
 
 if (!$show_archived) {
     $sql .= " AND f.is_archived = 0";
@@ -83,7 +76,9 @@ if ($search !== '') {
 $sql .= " ORDER BY f.created_at DESC";
 
 $stmt = $conn->prepare($sql);
-$stmt->bind_param($types, ...$params);
+if ($params) {
+    $stmt->bind_param($types, ...$params);
+}
 $stmt->execute();
 $files = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
@@ -206,6 +201,9 @@ $is_filtered = ($filter_status !== '' || $search !== '' || $show_archived);
                     <tr>
                         <td>
                             <?= htmlspecialchars(display_name($f['file_path'])) ?>
+                            <?php if ($multi_unit && isset($unit_names[(int)$f['program_id']])): ?>
+                                <br><small class="muted"><?= htmlspecialchars($unit_names[(int)$f['program_id']]) ?></small>
+                            <?php endif; ?>
                             <?php if ($f['status'] === 'needs_revision' && !$f['is_archived'] && $f['qa_remark']): ?>
                                 <div class="remark-box">
                                     <strong>QA note:</strong> <?= htmlspecialchars($f['qa_remark']) ?>

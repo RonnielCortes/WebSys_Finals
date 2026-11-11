@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/includes/helpers.php';
 
 $error = "";
 $username_error ="";
@@ -45,7 +46,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['username'] = $user['username'];
             $_SESSION['full_name'] = $user['full_name'] ?: $user['username'];
             $_SESSION['role_name'] = $user['role_name'];
-            $_SESSION['program_id'] = $user['program_id'];
+            // a Program user can belong to several programs/offices
+            $unit_ids = ($user['role_name'] === 'program') ? load_user_program_ids($conn, (int)$user['user_id']) : [];
+            $_SESSION['program_ids'] = $unit_ids;
+            $_SESSION['program_id']  = $unit_ids ? $unit_ids[0] : $user['program_id'];
 
                         $session_id = session_id();
             $ip = $_SERVER['REMOTE_ADDR'] ?? null;

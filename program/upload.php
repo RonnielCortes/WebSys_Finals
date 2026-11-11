@@ -15,22 +15,17 @@ require_once __DIR__ . '/../includes/helpers.php';
 $active_page = 'upload';
 
 $user_id    = (int)$_SESSION['user_id'];
-$program_id = (int)($_SESSION['program_id'] ?? 0);
 
-if (!$program_id) {
+// A user can belong to several programs/offices
+$unit_ids = session_program_ids();
+if (!$unit_ids) {
     die("Your account is not assigned to a program/office yet. Please contact the Admin.");
 }
-
-// This user's program/office name (used for the folder name and messages)
-$stmt = $conn->prepare("SELECT program_name FROM programs WHERE program_id = ?");
-$stmt->bind_param("i", $program_id);
-$stmt->execute();
-$program = $stmt->get_result()->fetch_assoc();
-$stmt->close();
-if (!$program) {
+$unit_list  = id_list($unit_ids);            // integers only, safe inside IN (...)
+$unit_names = program_names($conn, $unit_ids);
+if (!$unit_names) {
     die("Your program/office no longer exists. Please contact the Admin.");
 }
-$program_name = $program['program_name'];
 
 // Categories for the dropdown
 $categories = [];
@@ -47,10 +42,10 @@ $replace_id = (int)($_GET['replace'] ?? $_POST['replace'] ?? 0);
 $old = null;
 if ($replace_id) {
     $stmt = $conn->prepare(
-        "SELECT file_id, file_path, status, category_id, is_archived
-         FROM files WHERE file_id = ? AND program_id = ?"
+        "SELECT file_id, file_path, status, category_id, is_archived, program_id
+         FROM files WHERE file_id = ? AND program_id IN ($unit_list)"
     );
-    $stmt->bind_param("ii", $replace_id, $program_id);
+    $stmt->bind_param("i", $replace_id);
     $stmt->execute();
     $old = $stmt->get_result()->fetch_assoc();
     $stmt->close();
@@ -60,6 +55,19 @@ if ($replace_id) {
         exit();
     }
 }
+
+// Which of the user's programs/offices this file is for:
+//   re-submit/replace -> the same one as the old file
+//   new file          -> the one picked in the form (or the only one the user has)
+$unit_posted = (int)($_POST['unit'] ?? 0);
+if ($old) {
+    $program_id = (int)$old['program_id'];
+} elseif (in_array($unit_posted, $unit_ids, true)) {
+    $program_id = $unit_posted;
+} else {
+    $program_id = $unit_ids[0];
+}
+$program_name = $unit_names[$program_id] ?? 'your program';
 
 $error = "";
 // true  = QA sent it back and Program is fixing it (re-submit)
@@ -88,6 +96,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($_POST) && empty($_FILES) && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
         $error = "That file is too big for the server settings (post_max_size is "
             . ini_get('post_max_size') . "). The system allows up to 10 MB.";
+    } elseif (!$old && count($unit_ids) > 1 && !in_array($unit_posted, $unit_ids, true)) {
+        $error = "Please choose which program/office this file is for.";
     } elseif ($choose_new && ($msg = category_name_error($new_cat_text)) !== '') {
         $error = $msg;
     } elseif (!$choose_new && !isset($categories[$selected_category])) {
@@ -206,7 +216,7 @@ $page_title = $is_resubmit ? 'Re-submit File' : ($old ? 'Replace File' : 'Upload
         <div class="upload-wrap">
 
             <h2><?= $page_title ?></h2>
-            <p class="muted">Sending as <strong><?= htmlspecialchars($program_name) ?></strong></p>
+            <p class="muted">Sending as <strong><?= (!$old && count($unit_ids) > 1) ? 'one of your programs/offices' : htmlspecialchars($program_name) ?></strong></p>
 
             <?php if ($old): ?>
                 <div class="alert alert-info">
@@ -223,6 +233,18 @@ $page_title = $is_resubmit ? 'Re-submit File' : ($old ? 'Replace File' : 'Upload
                 enctype="multipart/form-data" class="upload-card">
                 <?php if ($old): ?>
                     <input type="hidden" name="replace" value="<?= (int)$old['file_id'] ?>">
+                <?php endif; ?>
+
+                <?php if (!$old && count($unit_ids) > 1): ?>
+                    <div class="upload-field">
+                        <label for="unit">Send for</label>
+                        <select name="unit" id="unit" required>
+                            <option value="">Select program/office</option>
+                            <?php foreach ($unit_names as $uid => $uname): ?>
+                                <option value="<?= (int)$uid ?>" <?= $unit_posted === $uid ? 'selected' : '' ?>><?= htmlspecialchars($uname) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                 <?php endif; ?>
 
                 <div class="upload-field">

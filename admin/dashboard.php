@@ -94,7 +94,10 @@ $recent_files = $conn->query(
 // Pending accounts (5)
 // ---------------------------------------------------------------
 $pending_accounts = $conn->query(
-    "SELECT u.user_id, u.username, u.full_name, u.requested_unit, r.role_name, p.program_name
+    "SELECT u.user_id, u.username, u.full_name, r.role_name,
+            COALESCE((SELECT GROUP_CONCAT(p2.program_name ORDER BY p2.program_name SEPARATOR ', ')
+                      FROM user_programs up JOIN programs p2 ON up.program_id = p2.program_id
+                      WHERE up.user_id = u.user_id), p.program_name) AS program_name
      FROM users u
      JOIN roles r ON u.role_id = r.role_id
      LEFT JOIN programs p ON u.program_id = p.program_id
@@ -237,7 +240,7 @@ function initials($name)
                             <div class="dash-avatar"><?= htmlspecialchars(initials($nm)) ?></div>
                             <div class="dash-who-text">
                                 <b><?= htmlspecialchars($nm) ?></b>
-                                <small><?= $u['role_name'] === 'program' ? 'Program &middot; ' . htmlspecialchars($u['program_name'] ?? ($u['requested_unit'] ? 'Other: ' . $u['requested_unit'] : '—')) : strtoupper(htmlspecialchars($u['role_name'])) ?></small>
+                                <small><?= $u['role_name'] === 'program' ? 'Program &middot; ' . htmlspecialchars($u['program_name'] ?? '—') : strtoupper(htmlspecialchars($u['role_name'])) ?></small>
                             </div>
                             <div class="dash-actions">
                                 <form method="POST" action="accounts_handler.php">
