@@ -1399,3 +1399,9 @@ input.has-error { border-color: #dc2626 !important; }
 .unit-item small { margin-left: auto; color: #8b7bb5; font-size: 12px; text-align: right; }
 .unit-empty { padding: 14px; text-align: center; color: #8b7bb5; font-size: 13px; }
 .unit-count { margin-top: 6px; font-size: 12px; color: #6b5b8c; }
+
+/* picker: "choose where you belong" step (register) */
+.unit-picker .unit-root { margin: 6px 0 4px; }
+.unit-picker .unit-hint { margin: 4px 0 8px; font-size: 12px; color: #8b7bb5; }
+.unit-list[hidden] { display: none; }
+.unit-chosen { color: #4c1d95; font-weight: bold; }

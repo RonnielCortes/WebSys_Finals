@@ -99,13 +99,34 @@ function program_names($conn, $ids)
 }
 
 /**
- * The searchable check-list used on Register and Edit Account.
+ * The check-list used on Register and Edit Account.
+ *   $programs = load_programs(), $selected = ids that start ticked.
+ *   $cascade = true  (Register): the user first chooses WHERE they belong
+ *                      (College, Accounting...) and only what is under it is listed.
+ *   $cascade = false (Admin edit): everything is listed, with a search box.
  * Departments/offices are listed apart from programs.
- * $programs = load_programs(), $selected = ids that start ticked.
  */
-function render_unit_picker($programs, $selected = [])
+function render_unit_picker($programs, $selected = [], $cascade = false)
 {
     $selected = array_map('intval', (array)$selected);
+
+    // the top-level folder (College, Accounting...) each folder sits under
+    $root_of = function ($id) use ($programs) {
+        $guard = 0;
+        $cur = (int)$id;
+        while (!empty($programs[$cur]['parent_id']) && $guard++ < 10) {
+            $cur = (int)$programs[$cur]['parent_id'];
+        }
+        return $cur;
+    };
+
+    $roots = [];
+    foreach ($programs as $id => $p) {
+        if (empty($p['parent_id'])) { $roots[$id] = $p['program_name']; }
+    }
+    $first_sel  = $selected ? (int)$selected[0] : 0;
+    $start_root = $first_sel && isset($programs[$first_sel]) ? $root_of($first_sel) : 0;
+
     $groups = [
         'Departments & Offices' => [],
         'Programs'              => [],
@@ -120,7 +141,16 @@ function render_unit_picker($programs, $selected = [])
     }
 
     ob_start(); ?>
-    <div class="unit-picker" data-unit-picker>
+    <div class="unit-picker" data-unit-picker <?= $cascade ? 'data-cascade' : '' ?>>
+        <?php if ($cascade): ?>
+            <select class="unit-root" aria-label="Where do you belong?">
+                <option value="">-- First, choose where you belong --</option>
+                <?php foreach ($roots as $rid => $rname): ?>
+                    <option value="<?= (int)$rid ?>" <?= $start_root === (int)$rid ? 'selected' : '' ?>><?= htmlspecialchars($rname) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <p class="unit-hint">Then tick your department/office and your program. You can switch to another one and tick more.</p>
+        <?php endif; ?>
         <input type="search" class="unit-search" placeholder="Search department, office or program..." autocomplete="off" aria-label="Search">
         <div class="unit-list">
             <?php foreach ($groups as $title => $list): if (!$list) continue; ?>
@@ -129,7 +159,7 @@ function render_unit_picker($programs, $selected = [])
                     <?php foreach ($list as $id => $p):
                         $where = $p['parent_id'] ? program_breadcrumb($programs, (int)$p['parent_id']) : '';
                     ?>
-                        <label class="unit-item" data-text="<?= htmlspecialchars(mb_strtolower($p['program_name'] . ' ' . $where)) ?>">
+                        <label class="unit-item" data-root="<?= $root_of($id) ?>" data-text="<?= htmlspecialchars(mb_strtolower($p['program_name'] . ' ' . $where)) ?>">
                             <input type="checkbox" name="units[]" value="<?= (int)$id ?>" <?= in_array((int)$id, $selected, true) ? 'checked' : '' ?>>
                             <span class="unit-name"><?= htmlspecialchars($p['program_name']) ?></span>
                             <?php if ($where): ?><small><?= htmlspecialchars($where) ?></small><?php endif; ?>
@@ -137,9 +167,9 @@ function render_unit_picker($programs, $selected = [])
                     <?php endforeach; ?>
                 </div>
             <?php endforeach; ?>
-            <div class="unit-empty" hidden>Nothing matches your search.</div>
+            <div class="unit-empty" hidden>Nothing to show.</div>
         </div>
-        <div class="unit-count"><span data-unit-count>0</span> selected</div>
+        <div class="unit-count"><span data-unit-count>0</span> selected<span class="unit-chosen" data-unit-chosen></span></div>
     </div>
     <?php
     return ob_get_clean();

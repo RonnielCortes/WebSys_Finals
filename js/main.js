@@ -121,38 +121,59 @@ document.addEventListener('submit', function (e) {
 });
 
 // ============================================
-// Program / Office check-list with a search box (Register, Admin > Edit Account)
+// Program / Office check-list (Register, Admin > Edit Account)
+//   Register : choose where you belong first -> only what is under it is listed
+//   Edit     : everything is listed
+//   Both     : a search box (searching looks at everything)
 // ============================================
 (function () {
     document.querySelectorAll('[data-unit-picker]').forEach(function (box) {
-        var search = box.querySelector('.unit-search');
-        var items  = box.querySelectorAll('.unit-item');
-        var groups = box.querySelectorAll('.unit-group');
-        var empty  = box.querySelector('.unit-empty');
-        var count  = box.querySelector('[data-unit-count]');
+        var cascade = box.hasAttribute('data-cascade');
+        var root    = box.querySelector('.unit-root');
+        var search  = box.querySelector('.unit-search');
+        var list    = box.querySelector('.unit-list');
+        var items   = box.querySelectorAll('.unit-item');
+        var groups  = box.querySelectorAll('.unit-group');
+        var empty   = box.querySelector('.unit-empty');
+        var count   = box.querySelector('[data-unit-count]');
+        var chosen  = box.querySelector('[data-unit-chosen]');
 
         function updateCount() {
-            if (count) count.textContent = box.querySelectorAll('input[type="checkbox"]:checked').length;
+            var on = box.querySelectorAll('input[type="checkbox"]:checked');
+            if (count) count.textContent = on.length;
+            if (chosen) {
+                var names = [];
+                on.forEach(function (c) { names.push(c.parentNode.querySelector('.unit-name').textContent); });
+                chosen.textContent = names.length ? ': ' + names.join(', ') : '';
+            }
         }
 
-        function filter() {
+        function apply() {
             var q = search.value.trim().toLowerCase();
+            var r = root ? root.value : '';
+            var waiting = cascade && q === '' && r === '';   // nothing chosen yet
             var shown = 0;
+
             items.forEach(function (it) {
-                var ok = q === '' || it.getAttribute('data-text').indexOf(q) !== -1;
+                var ok;
+                if (q !== '')      ok = it.getAttribute('data-text').indexOf(q) !== -1;
+                else if (cascade)  ok = r !== '' && it.getAttribute('data-root') === r;
+                else               ok = true;
                 it.hidden = !ok;
                 if (ok) shown++;
             });
-            groups.forEach(function (g) {
-                g.hidden = !g.querySelector('.unit-item:not([hidden])');
-            });
-            if (empty) empty.hidden = shown !== 0;
+            groups.forEach(function (g) { g.hidden = !g.querySelector('.unit-item:not([hidden])'); });
+
+            list.hidden = waiting;
+            if (empty) empty.hidden = waiting || shown !== 0;
         }
 
-        search.addEventListener('input', filter);
+        search.addEventListener('input', apply);
         // Enter in the search box must not submit the form
         search.addEventListener('keydown', function (e) { if (e.key === 'Enter') e.preventDefault(); });
+        if (root) root.addEventListener('change', function () { search.value = ''; apply(); });
         box.addEventListener('change', updateCount);
+        apply();
         updateCount();
     });
 })();

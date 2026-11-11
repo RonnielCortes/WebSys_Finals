@@ -152,8 +152,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <div id="program-field" style="display:none;">
                     <label>Program / Office</label>
-                    <small class="muted">Tick all that apply &mdash; you can belong to more than one.</small>
-                    <?= render_unit_picker($programs, $_POST['units'] ?? []) ?>
+                    <small class="muted">You can belong to more than one.</small>
+                    <?= render_unit_picker($programs, $_POST['units'] ?? [], true) ?>
+                    <small class="muted">Can't find yours? Please contact the Admin to add it, then register again.</small>
                 </div>
 
                 <button type="submit">Register</button>
