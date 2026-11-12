@@ -4,9 +4,9 @@ require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/includes/helpers.php';
 
 $error = "";
-$username_error ="";
-$password_error ="";
-$username="";
+$username_error = "";
+$password_error = "";
+$username = "";
 
 // If already logged in, send them straight to their dashboard
 if (isset($_SESSION['role_name'])) {
@@ -34,13 +34,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $user = $result->fetch_assoc();
 
-        if(!password_verify($password, $user['password'])){
+        if (!password_verify($password, $user['password'])) {
             $password_error = "Wrong password. Please try again.";
-        }elseif($user['account_status'] !== 'approved'){
+        } elseif ($user['account_status'] !== 'approved') {
             $error = "Your account is still " . $user['account_status'] . " Please wait for Admin approval.";
-        }elseif(!$user['is_active']){
+        } elseif (!$user['is_active']) {
             $error = "Your account have been deactivated. Please contact the Admin.";
-        }else{
+        } else {
             session_regenerate_id(true);
             $_SESSION['user_id'] = $user['user_id'];
             $_SESSION['username'] = $user['username'];
@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['program_ids'] = $unit_ids;
             $_SESSION['program_id']  = $unit_ids ? $unit_ids[0] : $user['program_id'];
 
-                        $session_id = session_id();
+            $session_id = session_id();
             $ip = $_SERVER['REMOTE_ADDR'] ?? null;
             $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
 
@@ -73,46 +73,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<title>Login - Document Management System</title>
-<link rel="stylesheet" href="css/style.css?v=<?= @filemtime(__DIR__ . '/css/style.css') ?>">
+    <meta charset="UTF-8">
+    <title>Login - Document Management System</title>
+    <link rel="stylesheet" href="css/style.css?v=<?= @filemtime(__DIR__ . '/css/style.css') ?>">
 </head>
+
 <body>
-<div class="auth-split">
-<div class="auth-form-panel">
-    <div class="info-badge">Quality Assurance Document Management System</div>
-    <h2>Welcome back</h2>
-    <p class="form-sub">Please enter your account details.</p>
+    <div class="auth-split">
+        <div class="auth-form-panel">
+            <div class="info-badge">Quality Assurance Document Management System</div>
+            <h2>Welcome back</h2>
+            <p class="form-sub">Please enter your account details.</p>
 
-    <?php if ($error): ?>
-        <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
-    <?php endif; ?>
+            <?php if ($error): ?>
+                <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
+            <?php endif; ?>
 
-    <form method="POST" action="login.php">
-        <label>Username</label>
-        <input type="text" name="username" autocomplete="username" required autofocus
-        value="<?= htmlspecialchars($username) ?>" class="<?= $username_error ? 'has-error' : '' ?>">
-        <?php if ($username_error):?><div class="field-error"><?= htmlspecialchars($username_error) ?></div><?php endif; ?>
+            <form method="POST" action="login.php">
+                <label>Username</label>
+                <input type="text" name="username" autocomplete="username" required autofocus
+                    value="<?= htmlspecialchars($username) ?>" class="<?= $username_error ? 'has-error' : '' ?>">
+                <?php if ($username_error): ?><div class="field-error"><?= htmlspecialchars($username_error) ?></div><?php endif; ?>
 
-        <label>Password</label>
-        <div class="pw-wrap">
-            <input type="password" name="password" id="password" required
-            class="<?= $password_error ? 'has-error' : '' ?>">
-            <button type="button" class="pw-toggle" onclick="togglePassword(this)" aria-label="Show password" title="Show / hide password">
-                <svg class="eye-open" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
-                <svg class="eye-closed" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a19.8 19.8 0 0 1 5.06-5.94M9.9 4.24A10.9 10.9 0 0 1 12 4c7 0 11 7 11 7a19.7 19.7 0 0 1-3.17 4.19M14.12 14.12A3 3 0 1 1 9.88 9.88"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-            </button>
+                <label>Password</label>
+                <div class="pw-wrap">
+                    <input type="password" name="password" id="password" required
+                        class="<?= $password_error ? 'has-error' : '' ?>">
+                    <button type="button" class="pw-toggle" onclick="togglePassword(this)" aria-label="Show password" title="Show / hide password">
+                        <svg class="eye-open" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
+                            <circle cx="12" cy="12" r="3" />
+                        </svg>
+                        <svg class="eye-closed" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a19.8 19.8 0 0 1 5.06-5.94M9.9 4.24A10.9 10.9 0 0 1 12 4c7 0 11 7 11 7a19.7 19.7 0 0 1-3.17 4.19M14.12 14.12A3 3 0 1 1 9.88 9.88" />
+                            <line x1="1" y1="1" x2="23" y2="23" />
+                        </svg>
+                    </button>
+                </div>
+                <?php if ($password_error): ?><div class="field-error"><?= htmlspecialchars($password_error) ?></div><?php endif; ?>
+
+                <button type="submit">Sign in</button>
+            </form>
+
+            <p>Don't have an account? <a href="register.php">Register here</a></p>
         </div>
-        <?php if ($password_error): ?><div class="field-error"><?= htmlspecialchars($password_error) ?></div><?php endif; ?>
+    </div>
 
-        <button type="submit">Sign in</button>
-    </form>
-
-    <p>Don't have an account? <a href="register.php">Register here</a></p>
-</div>
-</div>
-
-<script src="js/main.js?v=<?= @filemtime(__DIR__ . '/js/main.js') ?>"></script>
+    <script src="js/main.js?v=<?= @filemtime(__DIR__ . '/js/main.js') ?>"></script>
 </body>
+
 </html>
