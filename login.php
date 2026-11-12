@@ -85,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="auth-form-panel">
             <div class="info-badge">Quality Assurance Document Management System</div>
             <h2>Welcome back</h2>
-            <p class="form-sub">Please enter your account details.</p>
+            <p class="form-sub">Please enter your username and password</p>
 
             <?php if ($error): ?>
                 <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
