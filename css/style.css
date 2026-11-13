@@ -1406,3 +1406,6 @@ input.has-error { border-color: #dc2626 !important; }
 .unit-picker .unit-hint { margin: 4px 0 8px; font-size: 12px; color: #8b7bb5; }
 .unit-list[hidden] { display: none; }
 .unit-chosen { color: #4c1d95; font-weight: bold; }
+
+#program-levels .pl-select { margin-top: 10px; }
+#program-levels .pl-select:first-child { margin-top: 0; }

@@ -27,12 +27,12 @@ function validateRegisterForm() {
     }
 
     // a Program user must tick at least one program/office
-    const role = document.getElementById('role');
-    if (role && role.value === 'program' && !document.querySelector('[data-unit-picker] input[type="checkbox"]:checked')) {
-        alert('Please tick at least one program/office.');
-        return false;
-    }
-    return true;
+const role = document.getElementById('role');
+const pid  = document.getElementById('program_id');
+if (role && role.value === 'program' && pid && !pid.value) {
+    alert('Please keep selecting until you reach your specific program/office.');
+    return false;
+}
 }
 
 // Show / hide a password field. The button sits next to the input inside .pw-wrap.
@@ -177,3 +177,52 @@ document.addEventListener('submit', function (e) {
         updateCount();
     });
 })();
+
+// ============================================
+// Register: cascading Program / Office picker
+// Shows one dropdown at a time. Each choice with sub-folders opens the next
+// dropdown; the last choice (no children) becomes the hidden program_id.
+// ============================================
+function initProgramPicker() {
+    const box    = document.getElementById('program-levels');
+    const hidden = document.getElementById('program_id');
+    if (!box || !hidden || typeof PROGRAMS === 'undefined') return;
+
+    function childrenOf(parentId) {
+        return PROGRAMS.filter(function (p) { return p.parent === parentId; });
+    }
+
+    function addLevel(parentId) {
+        const kids = childrenOf(parentId);
+        if (!kids.length) return;
+
+        const sel = document.createElement('select');
+        sel.className = 'pl-select';
+        sel.innerHTML = '<option value="">-- Select --</option>';
+        kids.forEach(function (k) {
+            const o = document.createElement('option');
+            o.value = k.id;
+            o.textContent = k.name;
+            sel.appendChild(o);
+        });
+
+        sel.addEventListener('change', function () {
+            // remove every dropdown below this one
+            while (sel.nextElementSibling) sel.nextElementSibling.remove();
+            hidden.value = '';
+            if (!sel.value) return;
+
+            const id = parseInt(sel.value, 10);
+            if (childrenOf(id).length) {
+                addLevel(id);        // has sub-folders: show the next dropdown
+            } else {
+                hidden.value = id;   // last level: this is the program/office
+            }
+        });
+
+        box.appendChild(sel);
+    }
+
+    addLevel(0);   // top level (parent_id = 0)
+}
+document.addEventListener('DOMContentLoaded', initProgramPicker);
