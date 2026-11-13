@@ -198,7 +198,7 @@ function initProgramPicker() {
 
         const sel = document.createElement('select');
         sel.className = 'pl-select';
-        sel.innerHTML = '<option value="">-- Select --</option>';
+        sel.innerHTML = '<option value="">Choose your designated Office or Program</option>';
         kids.forEach(function (k) {
             const o = document.createElement('option');
             o.value = k.id;

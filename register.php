@@ -150,7 +150,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <label>Account Type</label>
                 <select name="role" id="role" onchange="toggleProgramField()" required>
-                    <option value="">-- Select --</option>
+                    <option value="">Please choose your account type</option>
                     <option value="qa">QA</option>
                     <option value="program">Program / Office</option>
                 </select>
