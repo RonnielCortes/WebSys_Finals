@@ -22,7 +22,7 @@ function display_name($file_path)
 function load_programs($conn)
 {
     $programs = [];
-    $result = $conn->query("SELECT program_id, program_name, parent_id, level FROM programs");
+    $result = $conn->query("SELECT program_id, program_name, description, parent_id, level FROM programs");
     while ($row = $result->fetch_assoc()) {
         $programs[(int)$row['program_id']] = $row;
     }

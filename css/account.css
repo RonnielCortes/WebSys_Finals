@@ -12,7 +12,7 @@
 }
 .acct-wrap { width: 100%; max-width: 620px; }
 .acct-title { text-align: center; }
-.acct-title h2 { margin: 0 0 6px; font-size: 28px; color: #2e1065; }
+.acct-title h2 { margin: 0 0 6px; font-size: 28px; color: #185d38; }
 .acct-title .muted { margin: 0 0 8px; font-size: 14px; }
 .acct-wrap .alert { margin-top: 14px; border-radius: 10px; }
 .acct-card { margin-top: 18px; }
@@ -20,9 +20,9 @@
 
 /* forms */
 .acct-form { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
-.acct-form label { margin: 8px 0 0; font-size: 13px; font-weight: bold; color: #4c1d95; }
+.acct-form label { margin: 8px 0 0; font-size: 13px; font-weight: bold; color: #174f31; }
 .acct-form input { width: 100%; box-sizing: border-box; }
-.acct-form input:disabled { background: #f5f3ff; color: #8b7bb5; cursor: not-allowed; }
+.acct-form input:disabled { background: #f5fdf9; color: #3fa56e; cursor: not-allowed; }
 .acct-actions { margin-top: 16px; }
 
 .acct-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; }
@@ -31,9 +31,9 @@
 
 .acct-btn {
     width: auto; margin: 0; padding: 10px 24px; border-radius: 999px;
-    font-size: 14px; font-weight: bold; background: #6d28d9;
+    font-size: 14px; font-weight: bold; background: #288d57;
 }
-.acct-btn:hover { background: #5b21b6; }
+.acct-btn:hover { background: #1f6c43; }
 .acct-link {
     width: auto; margin: 0; padding: 0; background: none; border: 0;
     color: #b91c1c; font-size: 13px; cursor: pointer; text-decoration: underline;
@@ -47,20 +47,20 @@
 /* Cancel + Save row (used by admin/edit_account.php) */
 .acct-form select {
     width: 100%; box-sizing: border-box; min-height: 42px; padding: 0 12px;
-    border: 1px solid #ddd6fe; border-radius: 10px; background: #fff; color: #2e1065; font: inherit;
+    border: 1px solid #ddf7e9; border-radius: 10px; background: #fff; color: #185d38; font: inherit;
 }
 .acct-form small.muted { margin-top: 2px; font-size: 12px; }
 .acct-actions-split { display: flex; align-items: center; justify-content: flex-end; gap: 20px; }
-.acct-cancel { font-size: 14px; color: #6b5b8c; }
-.acct-cancel:hover { color: #2e1065; }
+.acct-cancel { font-size: 14px; color: #2a704b; }
+.acct-cancel:hover { color: #185d38; }
 
 /* ---- profile header (picture, buttons, name, email) ---- */
 .acct-hero { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 32px 22px; }
 .acct-avatar {
     width: 132px; height: 132px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
-    background: #c4b5fd; color: #2e1065; font-size: 44px; font-weight: bold;
+    background: #c2f0d7; color: #185d38; font-size: 44px; font-weight: bold;
     display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 6px 22px rgba(76, 29, 149, 0.18);
+    box-shadow: 0 6px 22px rgba(23, 79, 49, 0.18);
 }
 .acct-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .acct-hero-alert { width: 100%; box-sizing: border-box; margin-top: 16px; text-align: left; }
@@ -70,19 +70,19 @@
 .acct-outline {
     display: inline-flex; align-items: center; justify-content: center;
     width: auto; margin: 0; padding: 0 26px; min-height: 42px; box-sizing: border-box;
-    border: 1px solid #cfc3ee; border-radius: 10px; background: #fff; color: #2e1065;
+    border: 1px solid #c8e9d7; border-radius: 10px; background: #fff; color: #185d38;
     font: inherit; font-size: 13px; font-weight: bold; letter-spacing: .08em; text-transform: uppercase;
     cursor: pointer; transition: background .15s, border-color .15s;
 }
-.acct-outline:hover { background: #f5f3ff; border-color: #8b5cf6; }
-.acct-photo-hint { margin: 10px 0 0; font-size: 12px; color: #8b7bb5; }
+.acct-outline:hover { background: #f5fdf9; border-color: #36d07e; }
+.acct-photo-hint { margin: 10px 0 0; font-size: 12px; color: #3fa56e; }
 
-.acct-hero .acct-name { margin: 22px 0 4px; font-size: 22px; color: #2e1065; }
-.acct-email { margin: 0 0 14px; font-size: 15px; color: #5f5776; }
+.acct-hero .acct-name { margin: 22px 0 4px; font-size: 22px; color: #185d38; }
+.acct-email { margin: 0 0 14px; font-size: 15px; color: #235d3e; }
 .acct-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
-.acct-chip { padding: 5px 14px; border-radius: 999px; background: #ede9fe; color: #4c1d95; font-size: 13px; font-weight: bold; }
+.acct-chip { padding: 5px 14px; border-radius: 999px; background: #edfaf3; color: #174f31; font-size: 13px; font-weight: bold; }
 .acct-chip.good { background: #dcfce7; color: #166534; }
-.acct-since { margin: 14px 0 0; font-size: 12px; color: #8b7bb5; }
+.acct-since { margin: 14px 0 0; font-size: 12px; color: #3fa56e; }
 
 /* the real file input is hidden; the "Change photo" label opens it */
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; opacity: 0; }

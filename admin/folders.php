@@ -29,7 +29,7 @@ $allowed_children = [
     'education_level' => ['department', 'program'],
     'department'      => ['program'],
     'program'         => [],
-    'office'          => [],
+    'office'          => ['office'],   // an office can have sub-offices (e.g. Accounting > Cashier)
 ];
 
 function clean_folder_name($s)
@@ -44,6 +44,15 @@ function folder_name_error($name)
     if (!preg_match('/^[\p{L}\p{N} .,&()\/\'-]+$/u', $name)) {
         return "The folder name has a character that isn't allowed.";
     }
+    return '';
+}
+function clean_description($s)
+{
+    return trim(preg_replace('/\s+/', ' ', (string)$s));
+}
+function description_error($d)
+{
+    if (mb_strlen($d) > 255) return "The description is too long (255 characters max).";
     return '';
 }
 // Is there already a folder with this name in the same place?
@@ -65,6 +74,7 @@ $programs = load_programs($conn);
 $error    = "";
 $flash    = $_GET['flash'] ?? '';
 $add_name = "";
+$add_desc = "";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -77,6 +87,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'add') {
         $name      = clean_folder_name($_POST['folder_name'] ?? '');
         $add_name  = $name;
+        $desc      = clean_description($_POST['description'] ?? '');
+        $add_desc  = $desc;
         $parent_id = (int)($_POST['parent_id'] ?? 0);
         $level     = $_POST['level'] ?? '';
         $parent_level = '';
@@ -92,6 +104,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($error === '') {
             if (($msg = folder_name_error($name)) !== '') {
                 $error = $msg;
+            } elseif (($msg = description_error($desc)) !== '') {
+                $error = $msg;
             } elseif (!in_array($level, $allowed_children[$parent_level] ?? [], true)) {
                 $error = "That kind of folder can't be placed there.";
             } else {
@@ -99,8 +113,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (folder_name_taken($conn, $name, $parent_param)) {
                     $error = "There is already a folder named \"" . $name . "\" in that place.";
                 } else {
-                    $stmt = $conn->prepare("INSERT INTO programs (program_name, parent_id, level) VALUES (?, ?, ?)");
-                    $stmt->bind_param("sis", $name, $parent_param, $level);
+                    $desc_param = ($desc === '') ? null : $desc;   // blank = NULL
+                    $stmt = $conn->prepare("INSERT INTO programs (program_name, description, parent_id, level) VALUES (?, ?, ?, ?)");
+                    $stmt->bind_param("ssis", $name, $desc_param, $parent_param, $level);
                     $stmt->execute();
                     $stmt->close();
                     header("Location: folders.php?flash=added");
@@ -112,17 +127,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // ---- rename ----
     } elseif ($action === 'rename') {
         $name = clean_folder_name($_POST['folder_name'] ?? '');
+        $desc = clean_description($_POST['description'] ?? '');
         if (!isset($programs[$id])) {
             $error = "That folder no longer exists.";
         } elseif (($msg = folder_name_error($name)) !== '') {
+            $error = $msg;
+        } elseif (($msg = description_error($desc)) !== '') {
             $error = $msg;
         } else {
             $parent_param = $programs[$id]['parent_id'] === null ? null : (int)$programs[$id]['parent_id'];
             if (folder_name_taken($conn, $name, $parent_param, $id)) {
                 $error = "There is already a folder named \"" . $name . "\" in that place.";
             } else {
-                $stmt = $conn->prepare("UPDATE programs SET program_name = ? WHERE program_id = ?");
-                $stmt->bind_param("si", $name, $id);
+                $desc_param = ($desc === '') ? null : $desc;   // blank = NULL
+                $stmt = $conn->prepare("UPDATE programs SET program_name = ?, description = ? WHERE program_id = ?");
+                $stmt->bind_param("ssi", $name, $desc_param, $id);
                 $stmt->execute();
                 $stmt->close();
                 header("Location: folders.php?flash=renamed");
@@ -198,7 +217,7 @@ $parents = array_filter($programs, function ($p) use ($allowed_children) {
 
 $flash_text = [
     'added'   => "Folder added.",
-    'renamed' => "Folder renamed.",
+    'renamed' => "Folder saved.",
     'deleted' => "Folder deleted.",
 ];
 ?>
@@ -238,6 +257,9 @@ $flash_text = [
           <input type="hidden" name="action" value="add">
           <input type="text" name="folder_name" maxlength="60" required
                  placeholder="e.g. CASE-BA or Library" value="<?= htmlspecialchars($add_name) ?>">
+          <input type="text" name="description" maxlength="255" class="fold-desc"
+                 placeholder="Meaning, e.g. College of Arts, Sciences, Education and Technology (optional)"
+                 value="<?= htmlspecialchars($add_desc) ?>" aria-label="Description">
           <select name="parent_id" id="foldParent" aria-label="Inside">
               <option value="0" data-allowed="education_level,office">Top level</option>
               <?php foreach ($parents as $id => $p): ?>
@@ -279,6 +301,9 @@ $flash_text = [
                       <span class="fold-level fold-<?= htmlspecialchars($p['level']) ?>"><?= htmlspecialchars($level_label[$p['level']] ?? $p['level']) ?></span>
                       <input type="text" name="folder_name" maxlength="60" required
                              value="<?= htmlspecialchars($p['program_name']) ?>" aria-label="Folder name">
+                      <input type="text" name="description" maxlength="255" class="fold-desc"
+                             placeholder="Description (optional)"
+                             value="<?= htmlspecialchars($p['description'] ?? '') ?>" aria-label="Description">
                       <span class="cat-count"><?= $nf ?> file<?= $nf === 1 ? '' : 's' ?></span>
                       <button type="submit" class="cat-btn alt">Save</button>
                   </form>

@@ -2,21 +2,21 @@
    css/archive.css — Admin "Archived Files" page (admin/archive.php)
    Loaded after style.css.
    ============================================ */
-.ar-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 14px; color: #4c1d95; }
+.ar-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 14px; color: #174f31; }
 .ar-filter input[type="number"] { width: 80px; }
 .ar-filter input[type="text"] { flex: 1; min-width: 180px; }
 .ar-filter input {
     box-sizing: border-box; min-height: 40px; padding: 0 12px;
-    border: 1px solid #ddd6fe; border-radius: 10px; background: #fff; color: #2e1065; font: inherit; font-size: 14px;
+    border: 1px solid #ddf7e9; border-radius: 10px; background: #fff; color: #185d38; font: inherit; font-size: 14px;
 }
-.ar-filter input:focus { outline: none; border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.18); }
-.ar-reset { font-size: 13px; color: #6d28d9; }
+.ar-filter input:focus { outline: none; border-color: #2ab169; box-shadow: 0 0 0 3px rgba(42, 177, 105, 0.18); }
+.ar-reset { font-size: 13px; color: #288d57; }
 
 .ar-panel { margin-top: 18px; }
 .ar-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
 .ar-bar h3 { margin: 0; display: flex; align-items: center; gap: 8px; }
 .ar-bar h3 small {
-    padding: 1px 9px; border-radius: 999px; background: #ede9fe; color: #5b21b6;
+    padding: 1px 9px; border-radius: 999px; background: #edfaf3; color: #1f6c43;
     font-size: 12px; font-weight: bold;
 }
 .ar-scroll { overflow-x: auto; }
@@ -25,10 +25,10 @@
 
 .ar-btn {
     width: auto; margin: 0; padding: 0 20px; min-height: 40px; border: 0; border-radius: 10px;
-    background: #6d28d9; color: #fff; font-size: 13px; font-weight: bold; cursor: pointer;
+    background: #288d57; color: #fff; font-size: 13px; font-weight: bold; cursor: pointer;
 }
-.ar-btn.alt { background: #fff; color: #5b21b6; border: 1px solid #cfc3ee; }
-.ar-btn.alt:hover { background: #f5f3ff; }
+.ar-btn.alt { background: #fff; color: #1f6c43; border: 1px solid #c8e9d7; }
+.ar-btn.alt:hover { background: #f5fdf9; }
 .ar-btn.danger { background: #b91c1c; }
 .ar-btn.danger:hover { background: #991b1b; }
 .ar-btn:disabled { opacity: .45; cursor: not-allowed; }

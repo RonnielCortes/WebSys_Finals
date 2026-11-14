@@ -5,7 +5,7 @@
 .cat-add, .cat-list { margin-bottom: 18px; }
 .cat-add h3, .cat-list h3 { display: flex; align-items: center; gap: 8px; }
 .cat-list h3 small {
-    padding: 1px 9px; border-radius: 999px; background: #ede9fe; color: #5b21b6;
+    padding: 1px 9px; border-radius: 999px; background: #edfaf3; color: #1f6c43;
     font-size: 12px; font-weight: bold;
 }
 
@@ -15,7 +15,7 @@
 .cat-list ul { list-style: none; margin: 12px 0 0; padding: 0; }
 .cat-list li {
     display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-    padding: 10px 0; border-bottom: 1px solid #f0ebfc;
+    padding: 10px 0; border-bottom: 1px solid #edfaf3;
 }
 .cat-list li:last-child { border-bottom: 0; }
 .cat-edit { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 260px; margin: 0; }
@@ -24,26 +24,26 @@
 
 .cat-add input[type="text"], .cat-edit input[type="text"] {
     box-sizing: border-box; min-height: 40px; padding: 0 12px;
-    border: 1px solid #ddd6fe; border-radius: 10px; background: #fff; color: #2e1065;
+    border: 1px solid #ddf7e9; border-radius: 10px; background: #fff; color: #185d38;
     font: inherit; font-size: 14px;
 }
 .cat-add input[type="text"]:focus, .cat-edit input[type="text"]:focus {
-    outline: none; border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.18);
+    outline: none; border-color: #2ab169; box-shadow: 0 0 0 3px rgba(42, 177, 105, 0.18);
 }
 
-.cat-count { font-size: 12px; color: #8b7bb5; white-space: nowrap; min-width: 60px; text-align: right; }
+.cat-count { font-size: 12px; color: #3fa56e; white-space: nowrap; min-width: 60px; text-align: right; }
 .cat-lock {
-    font-size: 12px; font-weight: bold; color: #6b5b8c; background: #f3effd;
+    font-size: 12px; font-weight: bold; color: #2a704b; background: #f1fbf6;
     padding: 4px 12px; border-radius: 999px; min-width: 56px; text-align: center; box-sizing: border-box;
 }
 
 .cat-btn {
     width: auto; margin: 0; padding: 0 20px; min-height: 40px; border: 0; border-radius: 10px;
-    background: #6d28d9; color: #fff; font-size: 13px; font-weight: bold; cursor: pointer;
+    background: #288d57; color: #fff; font-size: 13px; font-weight: bold; cursor: pointer;
 }
-.cat-btn:hover { background: #5b21b6; }
-.cat-btn.alt { background: #fff; color: #5b21b6; border: 1px solid #cfc3ee; }
-.cat-btn.alt:hover { background: #f5f3ff; }
+.cat-btn:hover { background: #1f6c43; }
+.cat-btn.alt { background: #fff; color: #1f6c43; border: 1px solid #c8e9d7; }
+.cat-btn.alt:hover { background: #f5fdf9; }
 .cat-btn.danger { background: #fff; color: #b91c1c; border: 1px solid #fca5a5; }
 .cat-btn.danger:hover { background: #fee2e2; }
 
@@ -54,16 +54,19 @@
 /* ---- Folders page (qa/folders.php) ---- */
 .fold-add select {
     box-sizing: border-box; min-height: 40px; padding: 0 12px; max-width: 100%;
-    border: 1px solid #ddd6fe; border-radius: 10px; background: #fff; color: #2e1065;
+    border: 1px solid #ddf7e9; border-radius: 10px; background: #fff; color: #185d38;
     font: inherit; font-size: 14px;
 }
-.fold-add select:focus { outline: none; border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.18); }
-.fold-hint { margin: 10px 0 0; font-size: 12px; color: #8b7bb5; }
+.fold-add select:focus { outline: none; border-color: #2ab169; box-shadow: 0 0 0 3px rgba(42, 177, 105, 0.18); }
+.fold-hint { margin: 10px 0 0; font-size: 12px; color: #3fa56e; }
 .fold-level {
     flex: 0 0 120px; text-align: center; box-sizing: border-box;
     padding: 4px 0; border-radius: 999px; font-size: 11px; font-weight: bold;
-    background: #f3effd; color: #6b5b8c;
+    background: #f1fbf6; color: #2a704b;
 }
-.fold-education_level { background: #ede9fe; color: #5b21b6; }
+.fold-education_level { background: #edfaf3; color: #1f6c43; }
 .fold-office          { background: #fef3c7; color: #92400e; }
 .fold-program         { background: #dcfce7; color: #166534; }
+/* description field (Departments & Programs page) */
+.fold-desc { flex: 2 1 280px; }
+.cat-edit .fold-desc { flex: 2 1 220px; min-width: 160px; }

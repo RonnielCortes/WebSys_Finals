@@ -31,11 +31,11 @@ while ($r = $res->fetch_assoc()) {
 }
 
 $status_groups = [
-    ['label' => 'Sent / Received', 'keys' => ['sent', 'received'],     'color' => '#6d28d9'],
-    ['label' => 'Under review',    'keys' => ['under_review'],         'color' => '#a78bfa'],
-    ['label' => 'Approved',        'keys' => ['approved'],             'color' => '#22c55e'],
+    ['label' => 'Sent / Received', 'keys' => ['sent', 'received'],     'color' => '#1b6b46'],
+    ['label' => 'Under review',    'keys' => ['under_review'],         'color' => '#f5b700'],
+    ['label' => 'Approved',        'keys' => ['approved'],             'color' => '#4ade80'],
     ['label' => 'Needs revision',  'keys' => ['needs_revision'],       'color' => '#fb923c'],
-    ['label' => 'Rejected / Returned', 'keys' => ['rejected', 'returned'], 'color' => '#f0abfc'],
+    ['label' => 'Rejected / Returned', 'keys' => ['rejected', 'returned'], 'color' => '#f87171'],
 ];
 $donut_parts = [];
 $angle = 0;
@@ -51,7 +51,7 @@ foreach ($status_groups as $i => $g) {
         $angle = $end;
     }
 }
-$donut_css = $donut_parts ? implode(', ', $donut_parts) : '#ede9fe 0 100%';
+$donut_css = $donut_parts ? implode(', ', $donut_parts) : '#e3f1e8 0 100%';
 
 // ---------------------------------------------------------------
 // Files by program / office (top 6, current versions only)

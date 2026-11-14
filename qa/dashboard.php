@@ -124,8 +124,8 @@ $prog_max = $per_program ? max(1, (int)$per_program[0]['c']) : 1;
 
 $pct = $all_n ? round($waiting_n / $all_n * 100, 1) : 0;
 $ring = $all_n
-    ? "conic-gradient(#5b2fc9 0 {$pct}%, #d9cffa {$pct}% 100%)"
-    : "#ece7f8";
+    ? "conic-gradient(#1b6b46 0 {$pct}%, #cfe9d9 {$pct}% 100%)"
+    : "#e3f1e8";
 
 // --------------------------------------------
 // The list (tab + program chip + search)
@@ -264,8 +264,8 @@ $programs = load_programs($conn);
             <div class="qd-donut">
                 <div class="qd-ring" style="background: <?= $ring ?>"><div><b><?= $all_n ?></b>files</div></div>
                 <div class="qd-key">
-                    <span><i style="background:#5b2fc9"></i>Waiting: <b><?= $waiting_n ?></b></span>
-                    <span><i style="background:#d9cffa"></i>Handled: <b><?= $handled_n ?></b></span>
+                    <span><i style="background:#1b6b46"></i>Waiting: <b><?= $waiting_n ?></b></span>
+                    <span><i style="background:#cfe9d9"></i>Handled: <b><?= $handled_n ?></b></span>
                 </div>
             </div>
         </div>
