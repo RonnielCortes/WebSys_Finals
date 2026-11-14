@@ -1441,3 +1441,10 @@ body:has(.auth-split){background:
 .dash-banner{border-left-color:var(--gold)}
 .welcome-name{color:#1f7a4d}
 .tab-row .tab.active{background:#1f7a4d}
+
+.auth-logo{
+    display: block;
+    margin: 0 auto 16px;
+    width: 90px;
+    height: auto;
+}
