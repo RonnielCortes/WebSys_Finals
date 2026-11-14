@@ -1354,13 +1354,16 @@ input.has-error { border-color: #dc2626 !important; }
 /* Login / Register: the full system name as the label above the title
    (long text, so it wraps nicely instead of being squeezed into a tiny pill) */
 .auth-form-panel .info-badge {
-    align-self: flex-start;
+    align-self: center;      /* centered (was flex-start = left) */
+    text-align: center;      /* centers the text when it wraps to 2 lines */
     max-width: 100%;
-    padding: 7px 16px;
-    border-radius: 14px;
-    font-size: 16px;
-    line-height: 1.45;
-    letter-spacing: 0.4px;
+    padding: 12px 20px;      /* more room around the text */
+    border-radius: 18px;
+    font-size: 17px;         /* bigger (was 16px) */
+    font-weight: 800;
+    line-height: 1.35;
+    letter-spacing: 0.3px;
+    margin-bottom: 22px;
 }
 /* ============================================
    Program / Office check-list with search (register + admin edit account)
