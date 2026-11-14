@@ -1409,3 +1409,10 @@ input.has-error { border-color: #dc2626 !important; }
 
 #program-levels .pl-select { margin-top: 10px; }
 #program-levels .pl-select:first-child { margin-top: 0; }
+
+#program-levels .pl-desc {
+    margin: 6px 4px 0;
+    font-size: 13px;
+    line-height: 1.4;
+    color: #6b5b95;
+}

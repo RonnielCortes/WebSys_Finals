@@ -20,11 +20,12 @@ $success = "";
 
 // Whole program tree, sent to the browser so the dropdowns can cascade
 $all_programs = [];
-$res = $conn->query("SELECT program_id, program_name, parent_id FROM programs ORDER BY program_id");
+$res = $conn->query("SELECT program_id, program_name, description, parent_id FROM programs ORDER BY program_id");
 while ($r = $res->fetch_assoc()) {
     $all_programs[] = [
         'id'     => (int)$r['program_id'],
         'name'   => $r['program_name'],
+        'desc'   => $r['description'] ?? '',
         'parent' => (int)$r['parent_id'],
     ];
 }
@@ -150,7 +151,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <label>Account Type</label>
                 <select name="role" id="role" onchange="toggleProgramField()" required>
-                    <option value="">Please choose your account type</option>
+                    <option value="">-- Select --</option>
                     <option value="qa">QA</option>
                     <option value="program">Program / Office</option>
                 </select>
@@ -166,7 +167,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <p>Already have an account? <a href="login.php">Login here</a></p>
         </div>
-       
+    </div>
 
     <script>
         // The whole program tree, used by js/main.js to build the cascading dropdowns
