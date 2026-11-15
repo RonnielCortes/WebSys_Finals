@@ -205,7 +205,7 @@ $role_text = ($user['role_name'] === 'qa') ? 'QA' : ucfirst($user['role_name']);
         </div>
     </main>
 
-<script src="../js/main.js?v=<?= @filemtime(__DIR__ . '/../js/main.js') ?>"></script>
+    <script src="../js/main.js?v=<?= @filemtime(__DIR__ . '/../js/main.js') ?>"></script>
 </body>
 
 </html>

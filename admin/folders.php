@@ -83,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!hash_equals($csrf, (string)($_POST['csrf'] ?? ''))) {
         $error = "The page expired. Please try again.";
 
-    // ---- add ----
+        // ---- add ----
     } elseif ($action === 'add') {
         $name      = clean_folder_name($_POST['folder_name'] ?? '');
         $add_name  = $name;
@@ -124,7 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-    // ---- rename ----
+        // ---- rename ----
     } elseif ($action === 'rename') {
         $name = clean_folder_name($_POST['folder_name'] ?? '');
         $desc = clean_description($_POST['description'] ?? '');
@@ -149,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-    // ---- delete (only when completely empty) ----
+        // ---- delete (only when completely empty) ----
     } elseif ($action === 'delete') {
         if (!isset($programs[$id])) {
             $error = "That folder no longer exists.";
@@ -190,14 +190,21 @@ $children = [];
 foreach ($programs as $pid => $p) {
     $children[(int)$p['parent_id']][] = $pid;
 }
-foreach ($children as $k => $list) { sort($list); $children[$k] = $list; }
+foreach ($children as $k => $list) {
+    sort($list);
+    $children[$k] = $list;
+}
 
 $file_n = [];
 $res = $conn->query("SELECT program_id, COUNT(*) AS c FROM files GROUP BY program_id");
-while ($r = $res->fetch_assoc()) { $file_n[(int)$r['program_id']] = (int)$r['c']; }
+while ($r = $res->fetch_assoc()) {
+    $file_n[(int)$r['program_id']] = (int)$r['c'];
+}
 $user_n = [];
 $res = $conn->query("SELECT program_id, COUNT(*) AS c FROM user_programs GROUP BY program_id");
-while ($r = $res->fetch_assoc()) { $user_n[(int)$r['program_id']] = (int)$r['c']; }
+while ($r = $res->fetch_assoc()) {
+    $user_n[(int)$r['program_id']] = (int)$r['c'];
+}
 
 // Flat, ordered rows with their depth
 $rows = [];
@@ -223,107 +230,110 @@ $flash_text = [
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Departments &amp; Programs</title>
-<link rel="stylesheet" href="../css/style.css?v=<?= @filemtime(__DIR__ . '/../css/style.css') ?>">
-<link rel="stylesheet" href="../css/categories.css?v=<?= @filemtime(__DIR__ . '/../css/categories.css') ?>">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Departments &amp; Programs</title>
+    <link rel="stylesheet" href="../css/style.css?v=<?= @filemtime(__DIR__ . '/../css/style.css') ?>">
+    <link rel="stylesheet" href="../css/categories.css?v=<?= @filemtime(__DIR__ . '/../css/categories.css') ?>">
 </head>
+
 <body class="with-sidebar">
 
-<?php include __DIR__ . '/../includes/admin_sidebar.php'; ?>
+    <?php include __DIR__ . '/../includes/admin_sidebar.php'; ?>
 
-<main class="main-content">
-  <div class="page-top">
-      <div>
-          <h2>Departments &amp; Programs</h2>
-          <p class="muted">Add, rename or delete the education levels, departments, programs and offices. Users pick from this list when they register.</p>
-          &nbsp;
-      </div>
-  </div>
+    <main class="main-content">
+        <div class="page-top">
+            <div>
+                <h2>Departments &amp; Programs</h2>
+                <p class="muted">Add, rename or delete the education levels, departments, programs and offices. Users pick from this list when they register.</p>
+                &nbsp;
+            </div>
+        </div>
 
-  <?php if (isset($flash_text[$flash])): ?>
-      <div class="alert alert-success"><?= htmlspecialchars($flash_text[$flash]) ?></div>
-  <?php endif; ?>
-  <?php if ($error): ?>
-      <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
-  <?php endif; ?>
+        <?php if (isset($flash_text[$flash])): ?>
+            <div class="alert alert-success"><?= htmlspecialchars($flash_text[$flash]) ?></div>
+        <?php endif; ?>
+        <?php if ($error): ?>
+            <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
+        <?php endif; ?>
 
-  <section class="dash-panel cat-add">
-      <h3>Add new</h3>
-      <form method="POST" class="cat-row fold-add" id="foldAdd">
-          <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
-          <input type="hidden" name="action" value="add">
-          <input type="text" name="folder_name" maxlength="60" required
-                 placeholder="e.g. CASE-BA or Library" value="<?= htmlspecialchars($add_name) ?>">
-          <input type="text" name="description" maxlength="255" class="fold-desc"
-                 placeholder="Meaning, e.g. College of Arts, Sciences, Education and Technology (optional)"
-                 value="<?= htmlspecialchars($add_desc) ?>" aria-label="Description">
-          <select name="parent_id" id="foldParent" aria-label="Inside">
-              <option value="0" data-allowed="education_level,office">Top level</option>
-              <?php foreach ($parents as $id => $p): ?>
-                  <option value="<?= (int)$id ?>" data-allowed="<?= htmlspecialchars(implode(',', $allowed_children[$p['level']])) ?>"
-                      <?= ((int)($_POST['parent_id'] ?? 0) === (int)$id) ? 'selected' : '' ?>>
-                      Inside: <?= htmlspecialchars(program_breadcrumb($programs, $id)) ?>
-                  </option>
-              <?php endforeach; ?>
-          </select>
-          <select name="level" id="foldLevel" aria-label="Type">
-              <?php foreach ($level_label as $key => $label): ?>
-                  <option value="<?= $key ?>" <?= (($_POST['level'] ?? '') === $key) ? 'selected' : '' ?>><?= $label ?></option>
-              <?php endforeach; ?>
-          </select>
-          <button type="submit" class="cat-btn">Add</button>
-      </form>
-      <p class="fold-hint">A folder can only be deleted while it is empty (no folders, files or accounts inside).</p>
-  </section>
+        <section class="dash-panel cat-add">
+            <h3>Add new</h3>
+            <form method="POST" class="cat-row fold-add" id="foldAdd">
+                <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
+                <input type="hidden" name="action" value="add">
+                <input type="text" name="folder_name" maxlength="60" required
+                    placeholder="e.g. CASE-BA or Library" value="<?= htmlspecialchars($add_name) ?>">
+                <input type="text" name="description" maxlength="255" class="fold-desc"
+                    placeholder="Meaning, e.g. College of Arts, Sciences, Education and Technology (optional)"
+                    value="<?= htmlspecialchars($add_desc) ?>" aria-label="Description">
+                <select name="parent_id" id="foldParent" aria-label="Inside">
+                    <option value="0" data-allowed="education_level,office">Top level</option>
+                    <?php foreach ($parents as $id => $p): ?>
+                        <option value="<?= (int)$id ?>" data-allowed="<?= htmlspecialchars(implode(',', $allowed_children[$p['level']])) ?>"
+                            <?= ((int)($_POST['parent_id'] ?? 0) === (int)$id) ? 'selected' : '' ?>>
+                            Inside: <?= htmlspecialchars(program_breadcrumb($programs, $id)) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <select name="level" id="foldLevel" aria-label="Type">
+                    <?php foreach ($level_label as $key => $label): ?>
+                        <option value="<?= $key ?>" <?= (($_POST['level'] ?? '') === $key) ? 'selected' : '' ?>><?= $label ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <button type="submit" class="cat-btn">Add</button>
+            </form>
+            <p class="fold-hint">A folder can only be deleted while it is empty (no folders, files or accounts inside).</p>
+        </section>
 
-  <section class="dash-panel cat-list">
-      <h3>All <small><?= count($rows) ?></small></h3>
-      <?php if (!$rows): ?>
-          <div class="dash-empty">No folders yet.</div>
-      <?php else: ?>
-      <ul>
-          <?php foreach ($rows as $r):
-              $id    = $r['id'];
-              $p     = $r['p'];
-              $nf    = $file_n[$id] ?? 0;
-              $nu    = $user_n[$id] ?? 0;
-              $nsub  = count($children[$id] ?? []);
-              $empty = ($nf === 0 && $nu === 0 && $nsub === 0);
-          ?>
-              <li style="padding-left: <?= (int)$r['depth'] * 26 ?>px">
-                  <form method="POST" class="cat-edit">
-                      <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
-                      <input type="hidden" name="action" value="rename">
-                      <input type="hidden" name="program_id" value="<?= (int)$id ?>">
-                      <span class="fold-level fold-<?= htmlspecialchars($p['level']) ?>"><?= htmlspecialchars($level_label[$p['level']] ?? $p['level']) ?></span>
-                      <input type="text" name="folder_name" maxlength="60" required
-                             value="<?= htmlspecialchars($p['program_name']) ?>" aria-label="Folder name">
-                      <input type="text" name="description" maxlength="255" class="fold-desc"
-                             placeholder="Description (optional)"
-                             value="<?= htmlspecialchars($p['description'] ?? '') ?>" aria-label="Description">
-                      <span class="cat-count"><?= $nf ?> file<?= $nf === 1 ? '' : 's' ?></span>
-                      <button type="submit" class="cat-btn alt">Save</button>
-                  </form>
-                  <?php if ($empty): ?>
-                      <form method="POST" class="cat-del" data-name="<?= htmlspecialchars($p['program_name']) ?>">
-                          <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
-                          <input type="hidden" name="action" value="delete">
-                          <input type="hidden" name="program_id" value="<?= (int)$id ?>">
-                          <button type="submit" class="cat-btn danger">Delete</button>
-                      </form>
-                  <?php else: ?>
-                      <span class="cat-lock" title="<?= $nsub ?> folder(s), <?= $nf ?> file(s), <?= $nu ?> account(s) inside">In use</span>
-                  <?php endif; ?>
-              </li>
-          <?php endforeach; ?>
-      </ul>
-      <?php endif; ?>
-  </section>
-</main>
+        <section class="dash-panel cat-list">
+            <h3>All <small><?= count($rows) ?></small></h3>
+            <?php if (!$rows): ?>
+                <div class="dash-empty">No folders yet.</div>
+            <?php else: ?>
+                <ul>
+                    <?php foreach ($rows as $r):
+                        $id    = $r['id'];
+                        $p     = $r['p'];
+                        $nf    = $file_n[$id] ?? 0;
+                        $nu    = $user_n[$id] ?? 0;
+                        $nsub  = count($children[$id] ?? []);
+                        $empty = ($nf === 0 && $nu === 0 && $nsub === 0);
+                    ?>
+                        <li style="padding-left: <?= (int)$r['depth'] * 26 ?>px">
+                            <form method="POST" class="cat-edit">
+                                <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
+                                <input type="hidden" name="action" value="rename">
+                                <input type="hidden" name="program_id" value="<?= (int)$id ?>">
+                                <span class="fold-level fold-<?= htmlspecialchars($p['level']) ?>"><?= htmlspecialchars($level_label[$p['level']] ?? $p['level']) ?></span>
+                                <input type="text" name="folder_name" maxlength="60" required
+                                    value="<?= htmlspecialchars($p['program_name']) ?>" aria-label="Folder name">
+                                <input type="text" name="description" maxlength="255" class="fold-desc"
+                                    placeholder="Description (optional)"
+                                    value="<?= htmlspecialchars($p['description'] ?? '') ?>" aria-label="Description">
+                                <span class="cat-count"><?= $nf ?> file<?= $nf === 1 ? '' : 's' ?></span>
+                                <button type="submit" class="cat-btn alt">Save</button>
+                            </form>
+                            <?php if ($empty): ?>
+                                <form method="POST" class="cat-del" data-name="<?= htmlspecialchars($p['program_name']) ?>">
+                                    <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="program_id" value="<?= (int)$id ?>">
+                                    <button type="submit" class="cat-btn danger">Delete</button>
+                                </form>
+                            <?php else: ?>
+                                <span class="cat-lock" title="<?= $nsub ?> folder(s), <?= $nf ?> file(s), <?= $nu ?> account(s) inside">In use</span>
+                            <?php endif; ?>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+        </section>
+    </main>
 
-<script src="../js/categories.js?v=<?= @filemtime(__DIR__ . '/../js/categories.js') ?>"></script>
+    <script src="../js/categories.js?v=<?= @filemtime(__DIR__ . '/../js/categories.js') ?>"></script>
 </body>
+
 </html>

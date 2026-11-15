@@ -68,7 +68,9 @@ function load_user_program_ids($conn, $user_id)
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
     $res = $stmt->get_result();
-    while ($r = $res->fetch_assoc()) { $ids[] = (int)$r['program_id']; }
+    while ($r = $res->fetch_assoc()) {
+        $ids[] = (int)$r['program_id'];
+    }
     $stmt->close();
 
     if (!$ids) {   // account made before user_programs existed
@@ -77,7 +79,9 @@ function load_user_program_ids($conn, $user_id)
         $stmt->execute();
         $r = $stmt->get_result()->fetch_assoc();
         $stmt->close();
-        if ($r) { $ids[] = (int)$r['program_id']; }
+        if ($r) {
+            $ids[] = (int)$r['program_id'];
+        }
     }
     return $ids;
 }
@@ -94,7 +98,9 @@ function program_names($conn, $ids)
 {
     $out = [];
     $res = $conn->query("SELECT program_id, program_name FROM programs WHERE program_id IN (" . id_list($ids) . ") ORDER BY program_name");
-    while ($r = $res->fetch_assoc()) { $out[(int)$r['program_id']] = $r['program_name']; }
+    while ($r = $res->fetch_assoc()) {
+        $out[(int)$r['program_id']] = $r['program_name'];
+    }
     return $out;
 }
 
@@ -122,7 +128,9 @@ function render_unit_picker($programs, $selected = [], $cascade = false)
 
     $roots = [];
     foreach ($programs as $id => $p) {
-        if (empty($p['parent_id'])) { $roots[$id] = $p['program_name']; }
+        if (empty($p['parent_id'])) {
+            $roots[$id] = $p['program_name'];
+        }
     }
     $first_sel  = $selected ? (int)$selected[0] : 0;
     $start_root = $first_sel && isset($programs[$first_sel]) ? $root_of($first_sel) : 0;
@@ -136,7 +144,9 @@ function render_unit_picker($programs, $selected = [], $cascade = false)
         $groups[$key][$id] = $p;
     }
     foreach ($groups as $k => $g) {
-        uasort($g, function ($a, $b) { return strcasecmp($a['program_name'], $b['program_name']); });
+        uasort($g, function ($a, $b) {
+            return strcasecmp($a['program_name'], $b['program_name']);
+        });
         $groups[$k] = $g;
     }
 
@@ -174,7 +184,7 @@ function render_unit_picker($programs, $selected = [], $cascade = false)
         </div>
         <div class="unit-count"><span data-unit-count>0</span> selected<span class="unit-chosen" data-unit-chosen></span></div>
     </div>
-    <?php
+<?php
     return ob_get_clean();
 }
 
