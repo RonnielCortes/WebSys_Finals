@@ -7,6 +7,7 @@
 require_once __DIR__ . '/../includes/check.php';
 require_role('admin');
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/helpers.php';   // load_programs(), load_user_program_ids(), render_unit_picker()
 
 $active_page = 'accounts';
 
@@ -208,11 +209,12 @@ $role_text = ($user['role_name'] === 'qa') ? 'QA' : ucfirst($user['role_name']);
 </body>
 
 </html>
-
-
+<?php
+/* My notes (kept here so they don't show up on the page):
 //dapat hindi sendback
 //dapat may filtering yung notification DONE NA
 //dapat yung alert is pop up lang tyaka dapat seconds lang sya nde na yung ni rerefresh DONE NA
 //dapat maganda
 //dapat ginagawa qa is pwede syang gumawa ng files for the program/employees
 //pano kapag dalawa role nya for example VPA tapos dean sya ng cet
+*/
