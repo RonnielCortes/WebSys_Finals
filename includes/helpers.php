@@ -159,9 +159,12 @@ function render_unit_picker($programs, $selected = [], $cascade = false)
                     <?php foreach ($list as $id => $p):
                         $where = $p['parent_id'] ? program_breadcrumb($programs, (int)$p['parent_id']) : '';
                     ?>
-                        <label class="unit-item" data-root="<?= $root_of($id) ?>" data-text="<?= htmlspecialchars(mb_strtolower($p['program_name'] . ' ' . $where)) ?>">
+                        <label class="unit-item" data-root="<?= $root_of($id) ?>" data-text="<?= htmlspecialchars(mb_strtolower($p['program_name'] . ' ' . ($p['description'] ?? '') . ' ' . $where)) ?>">
                             <input type="checkbox" name="units[]" value="<?= (int)$id ?>" <?= in_array((int)$id, $selected, true) ? 'checked' : '' ?>>
-                            <span class="unit-name"><?= htmlspecialchars($p['program_name']) ?></span>
+                            <span class="unit-text">
+                                <span class="unit-name"><?= htmlspecialchars($p['program_name']) ?></span>
+                                <?php if (!empty($p['description'])): ?><span class="unit-desc"><?= htmlspecialchars($p['description']) ?></span><?php endif; ?>
+                            </span>
                             <?php if ($where): ?><small><?= htmlspecialchars($where) ?></small><?php endif; ?>
                         </label>
                     <?php endforeach; ?>

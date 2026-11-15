@@ -16,11 +16,11 @@ function toggleProgramField() {
 // Simple client-side check before the register form is allowed to submit.
 // (The server still re-checks all of this — this is just for a faster user experience.)
 function validateRegisterForm() {
-    // Program / Office accounts must reach the LAST dropdown (a program with no sub-folders)
+    // A Program / Office account must add at least one program/office
     const role = document.getElementById('role');
-    const pid  = document.getElementById('program_id');
-    if (role && role.value === 'program' && pid && !pid.value) {
-        alert('Please keep selecting until you reach your specific program/office.');
+    if (role && role.value === 'program' &&
+        !document.querySelector('#program-field input[name="units[]"]')) {
+        alert('Please choose your program/office and press Add.');
         return false;
     }
 
@@ -237,3 +237,142 @@ function initProgramPicker() {
     addLevel(0);   // top level (parent_id = 0)
 }
 document.addEventListener('DOMContentLoaded', initProgramPicker);
+
+// ============================================
+// Register: Program / Office picker, step by step, more than one allowed
+//   1. choose where you belong (College, SMS...)  ->  the next dropdown opens
+//   2. keep choosing until you reach your department/office/program
+//   3. press "Add"  -> it goes to the list below (one hidden units[] input each)
+//   4. repeat if you handle another one; X removes a mistake
+// ============================================
+function initUnitCascade() {
+    const root = document.getElementById('unit-cascade');
+    if (!root || typeof UNITS === 'undefined') return;
+
+    const levels = root.querySelector('.uc-levels');
+    const descEl = root.querySelector('.uc-desc');
+    const addBtn = root.querySelector('.uc-add');
+    const chips  = root.querySelector('.uc-chips');
+
+    const byId = {};
+    UNITS.forEach(function (u) { byId[u.id] = u; });
+
+    let picked  = [];   // ids already added
+    let current = 0;    // the deepest dropdown that has a value (0 = nothing yet)
+
+    function kidsOf(parentId) {
+        return UNITS.filter(function (u) { return u.parent === parentId; })
+                    .sort(function (a, b) { return a.name.localeCompare(b.name); });
+    }
+    function pathOf(id) {   // "College > CASE-IT > BSIT"
+        const names = [];
+        let cur = byId[id], guard = 0;
+        while (cur && guard++ < 10) {
+            names.unshift(cur.name);
+            cur = cur.parent ? byId[cur.parent] : null;
+        }
+        return names.join(' > ');
+    }
+
+    function refreshAddArea() {
+        const u = current ? byId[current] : null;
+        if (u && u.desc) {
+            descEl.textContent = u.desc;     // textContent = safe, no HTML injection
+            descEl.hidden = false;
+        } else {
+            descEl.hidden = true;
+        }
+        const already = picked.indexOf(current) !== -1;
+        addBtn.disabled = !u || already;
+        addBtn.textContent = !u ? '+ Add'
+                            : already ? u.name + ' is already added'
+                            : '+ Add ' + u.name;
+    }
+
+    function addLevel(parentId) {
+        const kids = kidsOf(parentId);
+        if (!kids.length) return;
+
+        const sel = document.createElement('select');
+        sel.className = 'uc-select';
+        sel.innerHTML = '<option value="">' +
+            (parentId === 0 ? 'Choose where you belong' : 'Choose what is under it (optional)') + '</option>';
+        kids.forEach(function (k) {
+            const o = document.createElement('option');
+            o.value = k.id;
+            o.textContent = k.name;
+            sel.appendChild(o);
+        });
+
+        sel.addEventListener('change', function () {
+            while (sel.nextElementSibling) sel.nextElementSibling.remove();   // close the dropdowns below
+            if (!sel.value) {
+                current = parentId;           // went back: the parent is the choice again
+            } else {
+                current = parseInt(sel.value, 10);
+                addLevel(current);            // opens the next dropdown only if it has something under it
+            }
+            refreshAddArea();
+        });
+        levels.appendChild(sel);
+    }
+
+    function resetLevels() {
+        levels.innerHTML = '';
+        current = 0;
+        addLevel(0);
+        refreshAddArea();
+    }
+
+    function renderChips() {
+        chips.innerHTML = '';
+        picked.forEach(function (id) {
+            const chip = document.createElement('div');
+            chip.className = 'uc-chip';
+
+            const text = document.createElement('span');
+            const strong = document.createElement('strong');
+            strong.textContent = byId[id].name;
+            const small = document.createElement('small');
+            small.textContent = pathOf(id);
+            text.appendChild(strong);
+            text.appendChild(small);
+
+            const x = document.createElement('button');
+            x.type = 'button';
+            x.className = 'uc-x';
+            x.setAttribute('aria-label', 'Remove ' + byId[id].name);
+            x.textContent = '\u00d7';
+            x.addEventListener('click', function () {
+                picked = picked.filter(function (p) { return p !== id; });
+                renderChips();
+                refreshAddArea();
+            });
+
+            const hidden = document.createElement('input');
+            hidden.type = 'hidden';
+            hidden.name = 'units[]';
+            hidden.value = id;
+
+            chip.appendChild(text);
+            chip.appendChild(x);
+            chip.appendChild(hidden);
+            chips.appendChild(chip);
+        });
+    }
+
+    addBtn.addEventListener('click', function () {
+        if (!current || picked.indexOf(current) !== -1) return;
+        picked.push(current);
+        renderChips();
+        resetLevels();   // ready for the next one
+    });
+
+    // keep what was chosen before if the page came back with an error
+    if (typeof UNITS_PICKED !== 'undefined') {
+        picked = UNITS_PICKED.filter(function (id) { return byId[id]; });
+        renderChips();
+    }
+    resetLevels();
+}
+document.addEventListener('DOMContentLoaded', initUnitCascade);

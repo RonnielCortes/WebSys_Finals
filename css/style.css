@@ -1448,3 +1448,32 @@ body:has(.auth-split){background:
     width: 90px;
     height: auto;
 }
+
+.unit-item .unit-text { display: flex; flex-direction: column; min-width: 0; }
+.unit-item .unit-desc { font-size: 12px; font-weight: normal; color: #3fa56e; line-height: 1.35; }
+
+/* Idagdag sa dulo ng css/style.css: Program / Office picker (register) */
+.uc .uc-select { margin-top: 10px; }
+.uc .uc-levels .uc-select:first-child { margin-top: 0; }
+.uc .uc-desc { margin: 8px 4px 0; font-size: 13px; line-height: 1.4; color: #3fa56e; }
+.uc .uc-add {
+    display: block; width: 100%; margin-top: 12px; padding: 11px 16px;
+    border: 0; border-radius: 999px; cursor: pointer;
+    background: #f5b700; color: #3d2e00; font-weight: 700; font-size: 14px;
+}
+.uc .uc-add:hover:not(:disabled) { background: #e6aa00; }
+.uc .uc-add:disabled { background: #e3efe7; color: #7aa58a; cursor: not-allowed; }
+.uc .uc-chips { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.uc .uc-chip {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 9px 12px; background: #fff; border: 1px solid #cfe9d9; border-radius: 12px;
+    color: #185d38; font-size: 14px;
+}
+.uc .uc-chip strong { display: block; }
+.uc .uc-chip small { display: block; color: #3fa56e; font-size: 12px; }
+.uc .uc-x {
+    flex: none; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%;
+    background: #e3f1e8; color: #185d38; font-size: 18px; line-height: 1; cursor: pointer;
+}
+.uc .uc-x:hover { background: #f8c9c9; color: #8a1c1c; }
+.uc .uc-hint { margin: 10px 2px 0; font-size: 12px; color: #3fa56e; }

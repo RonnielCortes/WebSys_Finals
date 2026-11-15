@@ -1,34 +1,23 @@
 <?php
 require_once __DIR__ . '/config/db.php';
-
-// A valid choice must exist and have no sub-programs under it
-function is_leaf_program($conn, $program_id) {
-    $stmt = $conn->prepare(
-        "SELECT 1 FROM programs p
-         WHERE p.program_id = ?
-           AND NOT EXISTS (SELECT 1 FROM programs c WHERE c.parent_id = p.program_id)"
-    );
-    $stmt->bind_param("i", $program_id);
-    $stmt->execute();
-    $ok = $stmt->get_result()->num_rows === 1;
-    $stmt->close();
-    return $ok;
-}
+require_once __DIR__ . '/includes/helpers.php';
 
 $error = "";
 $success = "";
 
-// Whole program tree, sent to the browser so the dropdowns can cascade
-$all_programs = [];
-$res = $conn->query("SELECT program_id, program_name, description, parent_id FROM programs ORDER BY program_id");
-while ($r = $res->fetch_assoc()) {
-    $all_programs[] = [
-        'id'     => (int)$r['program_id'],
-        'name'   => $r['program_name'],
-        'desc'   => $r['description'] ?? '',
-        'parent' => (int)$r['parent_id'],
+$programs = load_programs($conn);   // every folder: departments, offices, programs
+
+// The whole tree, sent to the browser so the dropdowns can open one after another
+$units_for_js = [];
+foreach ($programs as $p) {
+    $units_for_js[] = [
+        'id'     => (int)$p['program_id'],
+        'name'   => $p['program_name'],
+        'desc'   => $p['description'] ?? '',
+        'parent' => (int)$p['parent_id'],
     ];
 }
+$picked_units = array_values(array_unique(array_map('intval', (array)($_POST['units'] ?? []))));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $full_name = trim($_POST['full_name'] ?? '');
@@ -36,19 +25,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email    = trim($_POST['email']);
     $password = $_POST['password'];
     $confirm  = $_POST['confirm_password'];
-    $role     = $_POST['role']; // 'qa' or 'program'
-    $program_id = ($role === 'program' && !empty($_POST['program_id']))
-        ? (int)$_POST['program_id']
-        : null;
+    $role     = $_POST['role'] ?? ''; // 'qa' or 'program'
+
+    // A Program user ticks one or more programs/offices (e.g. a VPA who is also a Dean)
+    $picked = array_values(array_unique(array_map('intval', (array)($_POST['units'] ?? []))));
+    $units  = ($role === 'program') ? $picked : [];
+    $program_id = $units ? $units[0] : null;   // users.program_id keeps the first one
 
     if ($full_name === '' || $username === '' || $email === '' || $password === '') {
         $error = "Please fill out all required fields.";
     } elseif ($password !== $confirm) {
         $error = "Passwords do not match.";
-    } elseif ($role === 'program' && !$program_id) {
-        $error = "Please select your program/office.";
-    } elseif ($role === 'program' && !is_leaf_program($conn, $program_id)) {
-        $error = "Please pick your specific program/office (keep selecting until there are no more choices).";
+    } elseif (!in_array($role, ['qa', 'program'], true)) {
+        $error = "Please choose an account type.";
+    } elseif ($role === 'program' && !$units) {
+        $error = "Please tick at least one program/office.";
+    } elseif ($role === 'program' && array_diff($units, array_keys($programs))) {
+        $error = "One of the programs/offices you ticked doesn't exist.";
     } else {
         // Check if username or email already exists
         $check = $conn->prepare("SELECT user_id FROM users WHERE username = ? OR email = ?");
@@ -69,18 +62,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
-            $insert = $conn->prepare(
-                "INSERT INTO users (username, full_name, email, password, role_id, program_id, account_status)
-                 VALUES (?, ?, ?, ?, ?, ?, 'pending')"
-            );
-            $insert->bind_param("ssssii", $username, $full_name, $email, $hashed_password, $role_id, $program_id);
+            try {
+                $conn->begin_transaction();
 
-            if ($insert->execute()) {
+                $insert = $conn->prepare(
+                    "INSERT INTO users (username, full_name, email, password, role_id, program_id, account_status)
+                     VALUES (?, ?, ?, ?, ?, ?, 'pending')"
+                );
+                $insert->bind_param("ssssii", $username, $full_name, $email, $hashed_password, $role_id, $program_id);
+                $insert->execute();
+                $new_user_id = (int)$conn->insert_id;
+                $insert->close();
+
+                foreach ($units as $uid) {
+                    $link = $conn->prepare("INSERT INTO user_programs (user_id, program_id) VALUES (?, ?)");
+                    $link->bind_param("ii", $new_user_id, $uid);
+                    $link->execute();
+                    $link->close();
+                }
+
+                $conn->commit();
                 $success = "Account created! Please wait for an Admin to approve your account before logging in.";
-            } else {
+            } catch (Throwable $e) {
+                $conn->rollback();
                 $error = "Something went wrong. Please try again.";
             }
-            $insert->close();
         }
         $check->close();
     }
@@ -158,8 +164,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <div id="program-field" style="display:none;">
                     <label>Program / Office</label>
-                    <div id="program-levels"></div>
-                    <input type="hidden" name="program_id" id="program_id" value="">
+                    <div class="uc" id="unit-cascade">
+                        <div class="uc-levels"></div>
+                        <div class="uc-desc" hidden></div>
+                        <button type="button" class="uc-add" disabled>+ Add</button>
+                        <div class="uc-chips"></div>
+                        <p class="uc-hint">Choose where you belong, then what is under it. Press <strong>Add</strong>, and repeat if you handle more than one.</p>
+                    </div>
                 </div>
 
                 <button type="submit">Register</button>
@@ -170,8 +181,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <script>
-        // The whole program tree, used by js/main.js to build the cascading dropdowns
-        const PROGRAMS = <?= json_encode($all_programs, JSON_HEX_TAG | JSON_HEX_AMP) ?>;
+        // The whole program tree + what was already chosen (kept if the form had an error)
+        const UNITS = <?= json_encode($units_for_js, JSON_HEX_TAG | JSON_HEX_AMP) ?>;
+        const UNITS_PICKED = <?= json_encode($picked_units) ?>;
     </script>
     <script src="js/main.js?v=<?= @filemtime(__DIR__ . '/js/main.js') ?>"></script>
 </body>
