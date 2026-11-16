@@ -85,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="auth-form-panel">
             <img src="System pictures/logo.png" alt="School logo" class="auth-logo">
             <div class="info-badge">Quality Assurance Document Management System</div>
-            <h2>Welcome back</h2>
+            <h2>Sign in</h2>
             <p class="form-sub">Please enter your username and password</p>
 
             <?php if ($error): ?>

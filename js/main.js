@@ -289,32 +289,125 @@ function initUnitCascade() {
                             : '+ Add ' + u.name;
     }
 
+    // Searchable dropdown: a text box + a list that filters while you type.
+    // onPick(id) runs when the user chooses an item; onPick(0) when they clear it.
+    function makeCombo(kids, placeholder, onPick) {
+        const wrap = document.createElement('div');
+        wrap.className = 'uc-combo';
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'uc-select uc-input';
+        input.placeholder = placeholder;
+        input.autocomplete = 'off';
+        input.setAttribute('role', 'combobox');
+        input.setAttribute('aria-expanded', 'false');
+
+        const list = document.createElement('ul');
+        list.className = 'uc-list';
+        list.setAttribute('role', 'listbox');
+        list.hidden = true;
+
+        wrap.appendChild(input);
+        wrap.appendChild(list);
+
+        let chosen = 0;      // id of the chosen item (0 = none)
+        let active = -1;     // highlighted row while using the arrow keys
+        let shown = [];      // items currently in the list
+
+        function render(filterText) {
+            const q = filterText.trim().toLowerCase();
+            shown = kids.filter(function (k) {
+                // search the name AND the description (so "arts" finds CASE-IT)
+                return !q || k.name.toLowerCase().indexOf(q) !== -1 ||
+                       (k.desc || '').toLowerCase().indexOf(q) !== -1;
+            });
+            list.innerHTML = '';
+            active = shown.length ? 0 : -1;
+            if (!shown.length) {
+                const li = document.createElement('li');
+                li.className = 'uc-none';
+                li.textContent = 'No match';
+                list.appendChild(li);
+                return;
+            }
+            shown.forEach(function (k, i) {
+                const li = document.createElement('li');
+                li.setAttribute('role', 'option');
+                li.className = (i === active ? 'on' : '');
+                const n = document.createElement('strong');
+                n.textContent = k.name;                 // textContent = safe
+                li.appendChild(n);
+                if (k.desc) {
+                    const d = document.createElement('small');
+                    d.textContent = k.desc;
+                    li.appendChild(d);
+                }
+                // mousedown (not click) so it runs before the input loses focus
+                li.addEventListener('mousedown', function (e) {
+                    e.preventDefault();
+                    choose(k);
+                });
+                list.appendChild(li);
+            });
+        }
+        function open()  { render(chosen ? '' : input.value); list.hidden = false; input.setAttribute('aria-expanded', 'true'); }
+        function close() { list.hidden = true; input.setAttribute('aria-expanded', 'false'); }
+        function choose(k) {
+            chosen = k.id;
+            input.value = k.name;
+            close();
+            onPick(k.id);
+        }
+        function highlight(n) {
+            const rows = list.querySelectorAll('li[role="option"]');
+            if (!rows.length) return;
+            active = (n + rows.length) % rows.length;
+            rows.forEach(function (r, i) { r.classList.toggle('on', i === active); });
+            rows[active].scrollIntoView({ block: 'nearest' });
+        }
+
+        input.addEventListener('focus', function () { input.select(); open(); });
+        input.addEventListener('input', function () {
+            if (chosen) { chosen = 0; onPick(0); }    // typing again = undo the old choice
+            render(input.value);
+            list.hidden = false;
+        });
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'ArrowDown') { e.preventDefault(); if (list.hidden) open(); else highlight(active + 1); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); highlight(active - 1); }
+            else if (e.key === 'Enter') {              // Enter must not submit the whole form
+                e.preventDefault();
+                if (!list.hidden && shown[active]) choose(shown[active]);
+            }
+            else if (e.key === 'Escape') { close(); }
+        });
+        input.addEventListener('blur', function () {
+            close();
+            if (!chosen) input.value = '';             // nothing really chosen: clear the leftover text
+        });
+        return wrap;
+    }
+
     function addLevel(parentId) {
         const kids = kidsOf(parentId);
         if (!kids.length) return;
 
-        const sel = document.createElement('select');
-        sel.className = 'uc-select';
-        sel.innerHTML = '<option value="">' +
-            (parentId === 0 ? 'Choose where you belong' : 'Choose what is under it (optional)') + '</option>';
-        kids.forEach(function (k) {
-            const o = document.createElement('option');
-            o.value = k.id;
-            o.textContent = k.name;
-            sel.appendChild(o);
-        });
-
-        sel.addEventListener('change', function () {
-            while (sel.nextElementSibling) sel.nextElementSibling.remove();   // close the dropdowns below
-            if (!sel.value) {
-                current = parentId;           // went back: the parent is the choice again
-            } else {
-                current = parseInt(sel.value, 10);
-                addLevel(current);            // opens the next dropdown only if it has something under it
+        const combo = makeCombo(
+            kids,
+            parentId === 0 ? 'Search or choose where you belong' : 'Search or choose what is under it (optional)',
+            function (id) {
+                while (combo.nextElementSibling) combo.nextElementSibling.remove();   // close the boxes below
+                if (!id) {
+                    current = parentId;           // cleared: the parent is the choice again
+                } else {
+                    current = id;
+                    addLevel(id);                 // opens the next box only if it has something under it
+                }
+                refreshAddArea();
             }
-            refreshAddArea();
-        });
-        levels.appendChild(sel);
+        );
+        levels.appendChild(combo);
     }
 
     function resetLevels() {
