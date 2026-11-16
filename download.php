@@ -16,7 +16,7 @@ if (!$file_id) {
     die("Invalid file.");
 }
 
-$stmt = $conn->prepare("SELECT file_path, program_id FROM files WHERE file_id = ?");
+$stmt = $conn->prepare("SELECT file_path, program_id, area_id FROM files WHERE file_id = ?");
 $stmt->bind_param("i", $file_id);
 $stmt->execute();
 $file = $stmt->get_result()->fetch_assoc();
@@ -31,6 +31,13 @@ if (!$file) {
 if (!can_access_file($file['program_id'])) {
     http_response_code(403);
     die("You don't have access to this file.");
+}
+
+// Files inside an Area are confidential: the Admin can NOT download them
+// (QA and the owning Program still can). The Admin can still delete archived ones.
+if ($file['area_id'] !== null && ($_SESSION['role_name'] ?? '') === 'admin') {
+    http_response_code(403);
+    die("Files inside an Area are confidential. Admins cannot download them.");
 }
 
 // Resolve the real location and make sure it really lives inside uploads/

@@ -46,9 +46,20 @@ if (!in_array($filter_status, file_statuses(), true)) {
     $filter_status = '';
 }
 
+// Area filter: '' = every file, 'n' = normal files only, a number = one Area
+$areas = [];
+$res = $conn->query("SELECT area_id, area_name FROM areas ORDER BY sort_order, area_id");
+while ($r = $res->fetch_assoc()) {
+    $areas[(int)$r['area_id']] = $r['area_name'];
+}
+$filter_area = $_GET['area'] ?? '';
+if ($filter_area !== 'n') {
+    $filter_area = isset($areas[(int)$filter_area]) ? (int)$filter_area : '';
+}
+
 // program_id is ALWAYS part of the query: a Program user can never see another program's files
 $sql = "SELECT f.file_id, f.file_path, f.status, f.created_at, f.is_archived, f.program_id,
-               c.category_name,
+               c.category_name, f.area_id, ar.area_name,
                COALESCE(u.full_name, u.username) AS sent_by,
                (SELECT l.remarks FROM file_logs l
                  WHERE l.file_id = f.file_id AND l.action = 'flagged_for_revision'
@@ -56,12 +67,20 @@ $sql = "SELECT f.file_id, f.file_path, f.status, f.created_at, f.is_archived, f.
         FROM files f
         JOIN users u ON f.uploaded_by = u.user_id
         LEFT JOIN file_categories c ON f.category_id = c.category_id
+        LEFT JOIN areas ar ON f.area_id = ar.area_id
         WHERE f.program_id IN ($unit_list)";
 $types  = '';
 $params = [];
 
 if (!$show_archived) {
     $sql .= " AND f.is_archived = 0";
+}
+if ($filter_area === 'n') {
+    $sql .= " AND f.area_id IS NULL";
+} elseif ($filter_area !== '') {
+    $sql    .= " AND f.area_id = ?";
+    $types  .= 'i';
+    $params[] = $filter_area;
 }
 if ($filter_status !== '') {
     $sql    .= " AND f.status = ?";
@@ -83,7 +102,7 @@ $stmt->execute();
 $files = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-$is_filtered = ($filter_status !== '' || $search !== '' || $show_archived);
+$is_filtered = ($filter_status !== '' || $filter_area !== '' || $search !== '' || $show_archived);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -157,6 +176,19 @@ $is_filtered = ($filter_status !== '' || $search !== '' || $show_archived);
             </select>
         </div>
 
+        <?php if ($areas): ?>
+        <div class="filter-field">
+            <label for="area">Area</label>
+            <select name="area" id="area">
+                <option value="">All</option>
+                <option value="n" <?= $filter_area === 'n' ? 'selected' : '' ?>>Normal files (no area)</option>
+                <?php foreach ($areas as $aid => $aname): ?>
+                    <option value="<?= $aid ?>" <?= $filter_area === $aid ? 'selected' : '' ?>><?= htmlspecialchars($aname) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <?php endif; ?>
+
         <div class="filter-field">
             <label for="q">File name</label>
             <input type="text" name="q" id="q" value="<?= htmlspecialchars($search) ?>" placeholder="Search...">
@@ -210,7 +242,7 @@ $is_filtered = ($filter_status !== '' || $search !== '' || $show_archived);
                                 </div>
                             <?php endif; ?>
                         </td>
-                        <td><?= htmlspecialchars($f['category_name'] ?? '—') ?></td>
+                        <td><?= htmlspecialchars($f['category_name'] ?? '—') ?><?php if ($f['area_name']): ?> <span class="badge-area"><?= htmlspecialchars($f['area_name']) ?></span><?php endif; ?></td>
                         <td><?= htmlspecialchars($f['sent_by']) ?></td>
                         <td>
                             <span class="badge badge-status-<?= htmlspecialchars($f['status']) ?>">

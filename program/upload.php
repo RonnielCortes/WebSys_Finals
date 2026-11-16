@@ -28,10 +28,18 @@ if (!$unit_names) {
 }
 
 // Categories for the dropdown
+// (each one remembers its Area: 0 = general, otherwise the Area it belongs to)
 $categories = [];
-$cat_result = $conn->query("SELECT category_id, category_name FROM file_categories ORDER BY category_name");
+$cat_result = $conn->query("SELECT category_id, category_name, area_id FROM file_categories ORDER BY category_name");
 while ($row = $cat_result->fetch_assoc()) {
-    $categories[(int)$row['category_id']] = $row['category_name'];
+    $categories[(int)$row['category_id']] = ['name' => $row['category_name'], 'area' => (int)$row['area_id']];
+}
+
+// Areas for the dropdown (Area I, Area II, ... set by the Admin)
+$areas = [];
+$area_result = $conn->query("SELECT area_id, area_name, description FROM areas ORDER BY sort_order, area_id");
+while ($row = $area_result->fetch_assoc()) {
+    $areas[(int)$row['area_id']] = $row;
 }
 
 // --------------------------------------------
@@ -42,7 +50,7 @@ $replace_id = (int)($_GET['replace'] ?? $_POST['replace'] ?? 0);
 $old = null;
 if ($replace_id) {
     $stmt = $conn->prepare(
-        "SELECT file_id, file_path, status, category_id, is_archived, program_id
+        "SELECT file_id, file_path, status, category_id, area_id, is_archived, program_id
          FROM files WHERE file_id = ? AND program_id IN ($unit_list)"
     );
     $stmt->bind_param("i", $replace_id);
@@ -74,6 +82,7 @@ $error = "";
 // false = QA has not started yet and Program just swaps the file (replace)
 $is_resubmit = $old && $old['status'] === 'needs_revision';
 $selected_category = $old ? (int)$old['category_id'] : 0;
+$selected_area     = $old ? (int)$old['area_id'] : 0;     // 0 = normal file (no area); a replacement stays in the same area
 $choose_new   = false;   // true = the Program user picked "+ Add new category"
 $new_cat_text = "";
 $note = "";
@@ -81,6 +90,9 @@ $note = "";
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $cat_choice = $_POST['category_id'] ?? '';
     $note = trim($_POST['note'] ?? '');
+    if (!$old) {
+        $selected_area = (int)($_POST['area_id'] ?? 0);
+    }
 
     if ($cat_choice === 'new') {
         // a brand-new category typed by the Program user
@@ -98,10 +110,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             . ini_get('post_max_size') . "). The system allows up to 10 MB.";
     } elseif (!$old && count($unit_ids) > 1 && !in_array($unit_posted, $unit_ids, true)) {
         $error = "Please choose which program/office this file is for.";
+    } elseif ($selected_area && !isset($areas[$selected_area])) {
+        $error = "Please choose a valid area.";
+    } elseif ($choose_new && $selected_area) {
+        $error = "New categories can only be added to normal files. Please pick one from the list.";
     } elseif ($choose_new && ($msg = category_name_error($new_cat_text)) !== '') {
         $error = $msg;
     } elseif (!$choose_new && !isset($categories[$selected_category])) {
         $error = "Please choose a category.";
+    } elseif (!$choose_new && $categories[$selected_category]['area'] !== $selected_area) {
+        $error = "That category does not belong to the place you chose. Please pick again.";
     } else {
         $error = validate_upload($_FILES['document'] ?? null);
     }
@@ -121,16 +139,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // 0) a new category? reuse an existing one with the same name, otherwise create it
                 if ($choose_new) {
-                    $selected_category = find_or_create_category($conn, $new_cat_text);
+                    $selected_category = find_or_create_category($conn, $new_cat_text, 0);
                 }
 
                 // 1) the new file (status always starts as 'sent')
                 $replaces = $old ? (int)$old['file_id'] : null;
                 $stmt = $conn->prepare(
-                    "INSERT INTO files (file_path, uploaded_by, program_id, category_id, status, replaces_file_id)
-                     VALUES (?, ?, ?, ?, 'sent', ?)"
+                    "INSERT INTO files (file_path, uploaded_by, program_id, category_id, area_id, status, replaces_file_id)
+                     VALUES (?, ?, ?, ?, ?, 'sent', ?)"
                 );
-                $stmt->bind_param("siiii", $path, $user_id, $program_id, $selected_category, $replaces);
+                $area_value = $selected_area ?: null;   // NULL when the old file had no area
+                $stmt->bind_param("siiiii", $path, $user_id, $program_id, $selected_category, $area_value, $replaces);
                 $stmt->execute();
                 $new_id = (int)$conn->insert_id;
                 $stmt->close();
@@ -247,16 +266,36 @@ $page_title = $is_resubmit ? 'Re-submit File' : ($old ? 'Replace File' : 'Upload
                     </div>
                 <?php endif; ?>
 
+                <?php if ($areas): ?>
+                    <div class="upload-field">
+                        <label for="area_id">Send to</label>
+                        <?php if ($old): ?>
+                            <input type="text" id="area_id" disabled
+                                value="<?= htmlspecialchars(isset($areas[$selected_area]) ? $areas[$selected_area]['area_name'] . ($areas[$selected_area]['description'] ? ' - ' . $areas[$selected_area]['description'] : '') : 'Normal files (no area)') ?>">
+                            <input type="hidden" id="area_value" value="<?= (int)$selected_area ?>">
+                        <?php else: ?>
+                            <select name="area_id" id="area_id">
+                                <option value="0">Normal files (no area)</option>
+                                <?php foreach ($areas as $aid => $a): ?>
+                                    <option value="<?= $aid ?>" <?= $selected_area === $aid ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($a['area_name'] . ($a['description'] ? ' - ' . $a['description'] : '')) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+
                 <div class="upload-field">
                     <label for="category_id">Category</label>
                     <select name="category_id" id="category_id" required>
                         <option value="">Select a category</option>
-                        <?php foreach ($categories as $id => $name): ?>
-                            <option value="<?= $id ?>" <?= (!$choose_new && $selected_category === $id) ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($name) ?>
+                        <?php foreach ($categories as $id => $c): ?>
+                            <option value="<?= $id ?>" data-area="<?= (int)$c['area'] ?>" <?= (!$choose_new && $selected_category === $id) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($c['name']) ?>
                             </option>
                         <?php endforeach; ?>
-                        <option value="new" <?= $choose_new ? 'selected' : '' ?>>+ Add new category&hellip;</option>
+                        <option value="new" data-area="0" <?= $choose_new ? 'selected' : '' ?>>+ Add new category&hellip;</option>
                     </select>
                     <input type="text" name="new_category" id="new_category" maxlength="50"
                            placeholder="Type the new category name" value="<?= htmlspecialchars($new_cat_text) ?>"
@@ -289,6 +328,7 @@ $page_title = $is_resubmit ? 'Re-submit File' : ($old ? 'Replace File' : 'Upload
     </main>
 
     <script src="../js/upload.js?v=<?= @filemtime(__DIR__ . '/../js/upload.js') ?>"></script>
+    <script src="../js/area_picker.js?v=<?= @filemtime(__DIR__ . '/../js/area_picker.js') ?>"></script>
 </body>
 
 </html>

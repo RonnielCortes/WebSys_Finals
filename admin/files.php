@@ -39,11 +39,23 @@ if (!in_array($filter_status, file_statuses(), true)) {
     $filter_status = '';
 }
 
+// Area filter: '' = every file, 'n' = normal files only, a number = one Area
+$areas = [];
+$res = $conn->query("SELECT area_id, area_name FROM areas ORDER BY sort_order, area_id");
+while ($r = $res->fetch_assoc()) {
+    $areas[(int)$r['area_id']] = $r['area_name'];
+}
+$filter_area = $_GET['area'] ?? '';
+if ($filter_area !== 'n') {
+    $filter_area = isset($areas[(int)$filter_area]) ? (int)$filter_area : '';
+}
+
 $sql = "SELECT f.file_id, f.file_path, f.status, f.created_at, f.program_id, f.is_archived,
-               COALESCE(u.full_name, u.username) AS uploaded_by, c.category_name
+               COALESCE(u.full_name, u.username) AS uploaded_by, c.category_name, f.area_id, ar.area_name
         FROM files f
         JOIN users u ON f.uploaded_by = u.user_id
-        LEFT JOIN file_categories c ON f.category_id = c.category_id";
+        LEFT JOIN file_categories c ON f.category_id = c.category_id
+        LEFT JOIN areas ar ON f.area_id = ar.area_id";
 
 $where  = [];
 $types  = '';
@@ -56,6 +68,13 @@ if ($filter_program) {
     $where[]  = 'f.program_id = ?';
     $types   .= 'i';
     $params[] = $filter_program;
+}
+if ($filter_area === 'n') {
+    $where[] = 'f.area_id IS NULL';
+} elseif ($filter_area !== '') {
+    $where[]  = 'f.area_id = ?';
+    $types   .= 'i';
+    $params[] = $filter_area;
 }
 if ($filter_status !== '') {
     $where[]  = 'f.status = ?';
@@ -91,7 +110,7 @@ $stmt->close();
 ksort($groups);
 
 $total_files = $conn->query("SELECT COUNT(*) AS c FROM files WHERE is_archived = 0")->fetch_assoc()['c'];
-$is_filtered = ($filter_program || $filter_status !== '' || $search !== '' || $show_archived);
+$is_filtered = ($filter_program || $filter_status !== '' || $filter_area !== '' || $search !== '' || $show_archived);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -136,6 +155,19 @@ $is_filtered = ($filter_program || $filter_status !== '' || $search !== '' || $s
                     <?php endforeach; ?>
                 </select>
             </div>
+
+            <?php if ($areas): ?>
+            <div class="filter-field">
+                <label for="area">Area</label>
+                <select name="area" id="area">
+                    <option value="">All</option>
+                    <option value="n" <?= $filter_area === 'n' ? 'selected' : '' ?>>Normal files (no area)</option>
+                    <?php foreach ($areas as $aid => $aname): ?>
+                        <option value="<?= $aid ?>" <?= $filter_area === $aid ? 'selected' : '' ?>><?= htmlspecialchars($aname) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <?php endif; ?>
 
             <div class="filter-field">
                 <label for="q">File name</label>
@@ -184,7 +216,7 @@ $is_filtered = ($filter_program || $filter_status !== '' || $search !== '' || $s
                         <?php foreach ($rows as $f): ?>
                             <tr>
                                 <td><?= htmlspecialchars(display_name($f['file_path'])) ?></td>
-                                <td><?= htmlspecialchars($f['category_name'] ?? '—') ?></td>
+                                <td><?= htmlspecialchars($f['category_name'] ?? '—') ?><?php if ($f['area_name']): ?> <span class="badge-area"><?= htmlspecialchars($f['area_name']) ?></span><?php endif; ?></td>
                                 <td><?= htmlspecialchars($f['uploaded_by']) ?></td>
                                 <td>
                                     <span class="badge badge-status-<?= htmlspecialchars($f['status']) ?>">
@@ -196,7 +228,11 @@ $is_filtered = ($filter_program || $filter_status !== '' || $search !== '' || $s
                                 </td>
                                 <td><?= date('M d, Y h:i A', strtotime($f['created_at'])) ?></td>
                                 <td class="actions-cell">
-                                    <a href="../download.php?id=<?= (int)$f['file_id'] ?>" class="btn-small btn-download">Download</a>
+                                    <?php if ($f['area_id'] === null): ?>
+                                        <a href="../download.php?id=<?= (int)$f['file_id'] ?>" class="btn-small btn-download">Download</a>
+                                    <?php else: ?>
+                                        <span class="lock-note" title="Files inside an Area are confidential">Confidential</span>
+                                    <?php endif; ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

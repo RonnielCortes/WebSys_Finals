@@ -1,8 +1,10 @@
 <?php
 // ============================================
-// qa/categories.php — QA manages the file categories:
-//   add a new one, rename one, delete one that no file uses.
-// (Program users can also add a category from the upload page.)
+// qa/categories.php — QA manages the file categories.
+//   General categories  = what Programs pick for normal files.
+//   Area categories     = only for files sent into one Area (Area I, Area II, ...).
+// Add a new one, rename one, delete one that no file uses.
+// (Program users can also add a GENERAL category from the upload page.)
 // ============================================
 require_once __DIR__ . '/../includes/check.php';
 require_role('qa');
@@ -16,9 +18,32 @@ if (empty($_SESSION['csrf'])) {
 }
 $csrf = $_SESSION['csrf'];
 
-$error   = "";
-$flash   = $_GET['flash'] ?? '';
-$add_val = "";
+// The Areas (set by the Admin)
+$areas = [];
+$res = $conn->query("SELECT area_id, area_name, description FROM areas ORDER BY sort_order, area_id");
+while ($r = $res->fetch_assoc()) {
+    $areas[(int)$r['area_id']] = $r;
+}
+
+$error    = "";
+$flash    = $_GET['flash'] ?? '';
+$add_val  = "";
+$add_area = (int)($_GET['area'] ?? 0);      // keeps the "For" choice after adding
+if ($add_area && !isset($areas[$add_area])) {
+    $add_area = 0;
+}
+
+// true when another category with this name already exists in the same place
+function category_name_taken($conn, $name, $area, $except_id)
+{
+    $a = $area > 0 ? (int)$area : null;
+    $stmt = $conn->prepare("SELECT category_id FROM file_categories WHERE LOWER(category_name) = LOWER(?) AND area_id <=> ? AND category_id <> ? LIMIT 1");
+    $stmt->bind_param("sii", $name, $a, $except_id);
+    $stmt->execute();
+    $taken = $stmt->get_result()->num_rows > 0;
+    $stmt->close();
+    return $taken;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -29,46 +54,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // ---- add ----
     } elseif ($action === 'add') {
-        $name    = clean_category_name($_POST['category_name'] ?? '');
-        $add_val = $name;
-        if (($msg = category_name_error($name)) !== '') {
+        $name     = clean_category_name($_POST['category_name'] ?? '');
+        $add_val  = $name;
+        $add_area = (int)($_POST['area_id'] ?? 0);
+        if ($add_area && !isset($areas[$add_area])) {
+            $error = "That area doesn't exist.";
+        } elseif (($msg = category_name_error($name)) !== '') {
             $error = $msg;
+        } elseif (category_name_taken($conn, $name, $add_area, 0)) {
+            $error = "A category named \"" . $name . "\" already exists " . ($add_area ? "in " . $areas[$add_area]['area_name'] : "in the general list") . ".";
         } else {
-            $stmt = $conn->prepare("SELECT category_id FROM file_categories WHERE LOWER(category_name) = LOWER(?) LIMIT 1");
-            $stmt->bind_param("s", $name);
-            $stmt->execute();
-            $exists = $stmt->get_result()->num_rows > 0;
-            $stmt->close();
-            if ($exists) {
-                $error = "A category named \"" . $name . "\" already exists.";
-            } else {
-                find_or_create_category($conn, $name);
-                header("Location: categories.php?flash=added");
-                exit();
-            }
+            find_or_create_category($conn, $name, $add_area);
+            header("Location: categories.php?flash=added&area=" . $add_area);
+            exit();
         }
 
-    // ---- rename ----
+    // ---- rename (stays in the same place) ----
     } elseif ($action === 'rename') {
         $name = clean_category_name($_POST['category_name'] ?? '');
-        if (($msg = category_name_error($name)) !== '') {
+        $stmt = $conn->prepare("SELECT area_id FROM file_categories WHERE category_id = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $cur = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if (!$cur) {
+            $error = "That category no longer exists.";
+        } elseif (($msg = category_name_error($name)) !== '') {
             $error = $msg;
+        } elseif (category_name_taken($conn, $name, (int)$cur['area_id'], $id)) {
+            $error = "Another category in the same place is already named \"" . $name . "\".";
         } else {
-            $stmt = $conn->prepare("SELECT category_id FROM file_categories WHERE LOWER(category_name) = LOWER(?) AND category_id <> ? LIMIT 1");
+            $stmt = $conn->prepare("UPDATE file_categories SET category_name = ? WHERE category_id = ?");
             $stmt->bind_param("si", $name, $id);
             $stmt->execute();
-            $exists = $stmt->get_result()->num_rows > 0;
             $stmt->close();
-            if ($exists) {
-                $error = "Another category is already named \"" . $name . "\".";
-            } else {
-                $stmt = $conn->prepare("UPDATE file_categories SET category_name = ? WHERE category_id = ?");
-                $stmt->bind_param("si", $name, $id);
-                $stmt->execute();
-                $stmt->close();
-                header("Location: categories.php?flash=renamed");
-                exit();
-            }
+            header("Location: categories.php?flash=renamed");
+            exit();
         }
 
     // ---- delete (only if no file uses it) ----
@@ -91,14 +112,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// All categories + how many files use each one
-$cats = $conn->query(
-    "SELECT c.category_id, c.category_name, COUNT(f.file_id) AS total
+// All categories + how many files use each one, grouped by place (0 = general)
+$groups = [0 => []];
+foreach ($areas as $aid => $a) {
+    $groups[$aid] = [];
+}
+$res = $conn->query(
+    "SELECT c.category_id, c.category_name, c.area_id, COUNT(f.file_id) AS total
      FROM file_categories c
      LEFT JOIN files f ON f.category_id = c.category_id
-     GROUP BY c.category_id, c.category_name
+     GROUP BY c.category_id, c.category_name, c.area_id
      ORDER BY c.category_name"
-)->fetch_all(MYSQLI_ASSOC);
+);
+while ($c = $res->fetch_assoc()) {
+    $key = $c['area_id'] === null ? 0 : (int)$c['area_id'];
+    $groups[$key][] = $c;
+}
+$total_cats = 0;
+foreach ($groups as $g) {
+    $total_cats += count($g);
+}
 
 $flash_text = [
     'added'   => "Category added.",
@@ -123,7 +156,7 @@ $flash_text = [
   <div class="page-top">
       <div>
           <h2>Categories</h2>
-          <p class="muted">The types of documents Programs can choose when they upload.</p>
+          <p class="muted">The types of documents Programs can choose when they upload. Area categories only appear for files sent into that Area.</p>
           &nbsp;
       </div>
   </div>
@@ -140,16 +173,27 @@ $flash_text = [
       <form method="POST" class="cat-row">
           <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
           <input type="hidden" name="action" value="add">
+          <select name="area_id" aria-label="For" class="cat-for">
+              <option value="0">General (normal files)</option>
+              <?php foreach ($areas as $aid => $a): ?>
+                  <option value="<?= $aid ?>" <?= $add_area === $aid ? 'selected' : '' ?>><?= htmlspecialchars($a['area_name']) ?><?= $a['description'] ? ' - ' . htmlspecialchars($a['description']) : '' ?></option>
+              <?php endforeach; ?>
+          </select>
           <input type="text" name="category_name" maxlength="50" required
                  placeholder="e.g. Lesson Plan" value="<?= htmlspecialchars($add_val) ?>">
           <button type="submit" class="cat-btn">Add</button>
       </form>
   </section>
 
+  <?php foreach ($groups as $gid => $cats): ?>
   <section class="dash-panel cat-list">
-      <h3>All categories <small><?= count($cats) ?></small></h3>
+      <h3>
+          <?= $gid ? htmlspecialchars($areas[$gid]['area_name']) : 'General' ?>
+          <small><?= count($cats) ?></small>
+      </h3>
+      <p class="muted cat-scope"><?= $gid ? htmlspecialchars($areas[$gid]['description'] ?? '') : 'Used for normal files (not sent into an Area).' ?></p>
       <?php if (!$cats): ?>
-          <div class="dash-empty">No categories yet.</div>
+          <div class="dash-empty">No categories here yet.</div>
       <?php else: ?>
       <ul>
           <?php foreach ($cats as $c): ?>
@@ -178,6 +222,7 @@ $flash_text = [
       </ul>
       <?php endif; ?>
   </section>
+  <?php endforeach; ?>
 </main>
 
 <script src="../js/categories.js?v=<?= @filemtime(__DIR__ . '/../js/categories.js') ?>"></script>

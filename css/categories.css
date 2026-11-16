@@ -70,3 +70,35 @@
 /* description field (Departments & Programs page) */
 .fold-desc { flex: 2 1 280px; }
 .cat-edit .fold-desc { flex: 2 1 220px; min-width: 160px; }
+
+/* Idagdag sa dulo ng css/categories.css: Areas page (admin/areas.php) at Area sa upload */
+.cat-add input[type="number"], .cat-edit input[type="number"] {
+    box-sizing: border-box; min-height: 40px; padding: 0 10px;
+    border: 1px solid #ddf7e9; border-radius: 10px; background: #fff; color: #185d38;
+    font: inherit; font-size: 14px;
+}
+.cat-add input[type="number"]:focus, .cat-edit input[type="number"]:focus {
+    outline: none; border-color: #2ab169; box-shadow: 0 0 0 3px rgba(42, 177, 105, 0.18);
+}
+.area-order { width: 78px; flex: none; }
+.cat-row input.area-desc, .cat-edit input.area-desc { flex: 2; min-width: 180px; }
+.cat-edit input.area-name { flex: 1; min-width: 120px; max-width: 200px; }
+.area-del { margin: 0; }
+
+/* Idagdag sa dulo ng css/style.css: Area badge at Area filter sa mga listahan ng file */
+.badge-area {
+    display: inline-block; margin-left: 4px; padding: 2px 9px; border-radius: 8px;
+    background: #fff4cc; color: #3d2e00; border: 1px solid #f5d96a;
+    font-size: 11.5px; font-weight: 700; white-space: nowrap;
+}
+.qf-areas { align-items: center; }
+.qf-areas .qf-lab { font-size: 12px; font-weight: 700; color: #3fa56e; margin-right: 2px; }
+
+/* Idagdag sa dulo ng css/categories.css: Categories page (QA) na may Area */
+.cat-add select.cat-for {
+    box-sizing: border-box; min-height: 40px; padding: 0 12px; max-width: 100%;
+    border: 1px solid #ddf7e9; border-radius: 10px; background: #fff; color: #185d38;
+    font: inherit; font-size: 14px;
+}
+.cat-add select.cat-for:focus { outline: none; border-color: #2ab169; box-shadow: 0 0 0 3px rgba(42, 177, 105, 0.18); }
+.cat-scope { margin: 2px 0 0; font-size: 13px; }

@@ -415,10 +415,14 @@ function category_name_error($name)
 
 // Case-insensitive: "reports" and "Reports" are the same category.
 // Returns the id of the existing category, or creates it and returns the new id.
-function find_or_create_category($conn, $name)
+function find_or_create_category($conn, $name, $area_id = 0)
 {
-    $stmt = $conn->prepare("SELECT category_id FROM file_categories WHERE LOWER(category_name) = LOWER(?) LIMIT 1");
-    $stmt->bind_param("s", $name);
+    // A category belongs to ONE place: the general list ($area_id = 0, stored as NULL)
+    // or one Area. The same name may exist in different places.
+    $area = $area_id > 0 ? (int)$area_id : null;
+
+    $stmt = $conn->prepare("SELECT category_id FROM file_categories WHERE LOWER(category_name) = LOWER(?) AND area_id <=> ? LIMIT 1");
+    $stmt->bind_param("si", $name, $area);
     $stmt->execute();
     $row = $stmt->get_result()->fetch_assoc();
     $stmt->close();
@@ -426,8 +430,8 @@ function find_or_create_category($conn, $name)
         return (int)$row['category_id'];
     }
 
-    $stmt = $conn->prepare("INSERT INTO file_categories (category_name) VALUES (?)");
-    $stmt->bind_param("s", $name);
+    $stmt = $conn->prepare("INSERT INTO file_categories (category_name, area_id) VALUES (?, ?)");
+    $stmt->bind_param("si", $name, $area);
     $stmt->execute();
     $id = (int)$conn->insert_id;
     $stmt->close();

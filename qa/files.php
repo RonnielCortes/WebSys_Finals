@@ -31,9 +31,22 @@ function subtree_ids($children, $id) {
     return $out;
 }
 
+// Areas (Area I, Area II, ...) and the Area filter: '' = every file, 'n' = normal files only, a number = one Area
+$areas = [];
+$res = $conn->query("SELECT area_id, area_name FROM areas ORDER BY sort_order, area_id");
+while ($r = $res->fetch_assoc()) { $areas[(int)$r['area_id']] = $r['area_name']; }
+$sel_area = $_GET['area'] ?? '';
+if ($sel_area !== 'n') { $sel_area = isset($areas[(int)$sel_area]) ? (int)$sel_area : ''; }
+// ready-made SQL piece for the chosen Area ($col = the column name, with or without table alias)
+function area_cond($sel_area, $col) {
+    if ($sel_area === 'n') { return " AND $col IS NULL"; }
+    if ($sel_area !== '')  { return " AND $col = " . (int)$sel_area; }
+    return '';
+}
+
 // Files per program (current versions), then summed up the tree
 $direct = [];
-$res = $conn->query("SELECT program_id, COUNT(*) AS c FROM files WHERE is_archived = 0 GROUP BY program_id");
+$res = $conn->query("SELECT program_id, COUNT(*) AS c FROM files WHERE is_archived = 0" . area_cond($sel_area, 'area_id') . " GROUP BY program_id");
 while ($r = $res->fetch_assoc()) { $direct[(int)$r['program_id']] = (int)$r['c']; }
 
 function folder_count($children, $direct, $id) {
@@ -70,9 +83,19 @@ function qurl($changes = []) {
 }
 
 // Categories (for the chips)
-$categories = [];
-$res = $conn->query("SELECT category_id, category_name FROM file_categories ORDER BY category_name");
-while ($r = $res->fetch_assoc()) { $categories[(int)$r['category_id']] = $r['category_name']; }
+// $categories = every category (to name the chosen one); $chip_categories = the ones shown as chips
+// for the chosen Area (an Area category is labelled with its Area when all Areas are shown)
+$categories = []; $chip_categories = [];
+$res = $conn->query("SELECT category_id, category_name, area_id FROM file_categories ORDER BY category_name");
+while ($r = $res->fetch_assoc()) {
+    $cid = (int)$r['category_id'];
+    $categories[$cid] = $r['category_name'];
+    $in_area = ($r['area_id'] === null) ? 0 : (int)$r['area_id'];
+    $show = ($sel_area === '') || ($sel_area === 'n' && $in_area === 0) || ($sel_area !== 'n' && $sel_area === $in_area);
+    if ($show) {
+        $chip_categories[$cid] = $r['category_name'] . (($sel_area === '' && $in_area) ? ' · ' . $areas[$in_area] : '');
+    }
+}
 if (!isset($categories[$sel_category])) { $sel_category = 0; }
 
 // ---------------------------------------------------------------
@@ -86,14 +109,16 @@ $show_files = ($sel_program > 0 || $search !== '');
 // ---------------------------------------------------------------
 $files = [];
 $sql = "SELECT f.file_id, f.file_path, f.status, f.created_at, f.program_id, f.is_archived,
-               f.category_id, c.category_name, COALESCE(u.full_name, u.username) AS sent_by,
+               f.category_id, c.category_name, f.area_id, ar.area_name, COALESCE(u.full_name, u.username) AS sent_by,
                (SELECT l.remarks FROM file_logs l
                  WHERE l.file_id = f.file_id AND l.action IN ('sent', 'resubmitted')
                  ORDER BY l.timestamp DESC, l.log_id DESC LIMIT 1) AS program_note
         FROM files f
         JOIN users u ON f.uploaded_by = u.user_id
         LEFT JOIN file_categories c ON f.category_id = c.category_id
+        LEFT JOIN areas ar ON f.area_id = ar.area_id
         WHERE 1 = 1";
+$sql .= area_cond($sel_area, 'f.area_id');
 $types = ''; $params = [];
 
 if (!$show_old) { $sql .= " AND f.is_archived = 0"; }
@@ -135,7 +160,7 @@ if (!$sel_category) {
         $res = $conn->query(
             "SELECT c.category_id, c.category_name, COUNT(*) AS n
              FROM files f JOIN file_categories c ON f.category_id = c.category_id
-             WHERE f.is_archived = 0 AND f.program_id IN (" . implode(',', $ids) . ")
+             WHERE f.is_archived = 0" . area_cond($sel_area, 'f.area_id') . " AND f.program_id IN (" . implode(',', $ids) . ")
              GROUP BY c.category_id, c.category_name ORDER BY c.category_name"
         );
         while ($r = $res->fetch_assoc()) {
@@ -161,7 +186,7 @@ function file_kind($path) {
     return ['oth', strtoupper(substr($ext, 0, 3))];
 }
 
-$is_filtered = ($sel_category || $sel_status !== '' || $search !== '' || $show_old);
+$is_filtered = ($sel_category || $sel_area !== '' || $sel_status !== '' || $search !== '' || $show_old);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -208,6 +233,7 @@ $is_filtered = ($sel_category || $sel_status !== '' || $search !== '' || $show_o
             <form method="GET" action="files.php" class="qf-tools">
                 <input type="hidden" name="program" value="<?= $sel_program ?>">
                 <input type="hidden" name="category" value="<?= $sel_category ?>">
+                <input type="hidden" name="area" value="<?= htmlspecialchars((string)$sel_area) ?>">
                 <input type="hidden" name="view" value="<?= $view ?>">
                 <input type="text" name="q" value="<?= htmlspecialchars($search) ?>" placeholder="Search file name...">
                 <select name="status" aria-label="Status">
@@ -223,16 +249,27 @@ $is_filtered = ($sel_category || $sel_status !== '' || $search !== '' || $show_o
                 </select>
                 <label class="qf-check"><input type="checkbox" name="archived" value="1" <?= $show_old ? 'checked' : '' ?>> Old versions</label>
                 <button type="submit">Apply</button>
-                <?php if ($is_filtered): ?><a class="btn-reset" href="<?= htmlspecialchars(qurl(['category' => 0, 'status' => '', 'q' => '', 'archived' => ''])) ?>">Reset</a><?php endif; ?>
+                <?php if ($is_filtered): ?><a class="btn-reset" href="<?= htmlspecialchars(qurl(['category' => 0, 'area' => '', 'status' => '', 'q' => '', 'archived' => ''])) ?>">Reset</a><?php endif; ?>
                 <div class="qf-seg">
                     <a class="<?= $view === 'list' ? 'on' : '' ?>" href="<?= htmlspecialchars(qurl(['view' => 'list'])) ?>">List</a>
                     <a class="<?= $view === 'grid' ? 'on' : '' ?>" href="<?= htmlspecialchars(qurl(['view' => 'grid'])) ?>">Grid</a>
                 </div>
             </form>
 
+            <?php if ($areas): ?>
+            <div class="qf-chips qf-areas">
+                <span class="qf-lab">Area</span>
+                <a class="qf-chip<?= $sel_area === '' ? ' on' : '' ?>" href="<?= htmlspecialchars(qurl(['area' => '', 'category' => 0])) ?>">All</a>
+                <a class="qf-chip<?= $sel_area === 'n' ? ' on' : '' ?>" href="<?= htmlspecialchars(qurl(['area' => 'n', 'category' => 0])) ?>">Normal files</a>
+                <?php foreach ($areas as $aid => $aname): ?>
+                    <a class="qf-chip<?= $sel_area === $aid ? ' on' : '' ?>" href="<?= htmlspecialchars(qurl(['area' => $aid, 'category' => 0])) ?>"><?= htmlspecialchars($aname) ?></a>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
+
             <div class="qf-chips">
                 <a class="qf-chip<?= $sel_category === 0 ? ' on' : '' ?>" href="<?= htmlspecialchars(qurl(['category' => 0])) ?>">All categories</a>
-                <?php foreach ($categories as $cid => $cname): ?>
+                <?php foreach ($chip_categories as $cid => $cname): ?>
                     <a class="qf-chip<?= $sel_category === $cid ? ' on' : '' ?>" href="<?= htmlspecialchars(qurl(['category' => $cid])) ?>"><?= htmlspecialchars($cname) ?></a>
                 <?php endforeach; ?>
             </div>
@@ -275,7 +312,7 @@ $is_filtered = ($sel_category || $sel_status !== '' || $search !== '' || $show_o
                                     <div class="pnote qf-pnote"><b>Note:</b> <?= nl2br(htmlspecialchars($pn)) ?></div>
                                 <?php endif; ?>
                             </td>
-                            <td><?php if ($f['category_name']): ?><span class="qf-cat"><?= htmlspecialchars($f['category_name']) ?></span><?php else: ?>—<?php endif; ?></td>
+                            <td><?php if ($f['category_name']): ?><span class="qf-cat"><?= htmlspecialchars($f['category_name']) ?></span><?php else: ?>—<?php endif; ?><?php if ($f['area_name']): ?> <span class="badge-area"><?= htmlspecialchars($f['area_name']) ?></span><?php endif; ?></td>
                             <td><?= htmlspecialchars($f['sent_by']) ?></td>
                             <td><span class="badge badge-status-<?= htmlspecialchars($f['status']) ?>"><?= htmlspecialchars(status_label($f['status'])) ?></span></td>
                             <td class="qf-date"><?= date('M d, h:i A', strtotime($f['created_at'])) ?></td>
@@ -305,7 +342,7 @@ $is_filtered = ($sel_category || $sel_status !== '' || $search !== '' || $show_o
                         <div class="qf-card">
                             <span class="qf-ficon qf-big qf-<?= $kc ?>"><?= htmlspecialchars($kt) ?></span>
                             <b title="<?= htmlspecialchars(display_name($f['file_path'])) ?>"><?= htmlspecialchars(display_name($f['file_path'])) ?></b>
-                            <small><?= htmlspecialchars($f['category_name'] ?? '—') ?> &middot; <?= htmlspecialchars($f['sent_by']) ?></small>
+                            <small><?= htmlspecialchars($f['category_name'] ?? '—') ?><?= $f['area_name'] ? ' (' . htmlspecialchars($f['area_name']) . ')' : '' ?> &middot; <?= htmlspecialchars($f['sent_by']) ?></small>
                             <span class="badge badge-status-<?= htmlspecialchars($f['status']) ?>"><?= htmlspecialchars(status_label($f['status'])) ?></span>
                             <small><?= date('M d, h:i A', strtotime($f['created_at'])) ?></small>
                             <?php $pn = program_note($f['program_note'] ?? ''); if ($pn !== ''): ?>
