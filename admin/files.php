@@ -3,6 +3,7 @@ require_once __DIR__ . '/../includes/check.php';
 require_role('admin');
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/helpers.php';
+require_once __DIR__ . '/../includes/area_links.php';
 
 $active_page = 'files';
 
@@ -51,7 +52,7 @@ if ($filter_area !== 'n') {
 }
 
 $sql = "SELECT f.file_id, f.file_path, f.status, f.created_at, f.program_id, f.is_archived,
-               COALESCE(u.full_name, u.username) AS uploaded_by, c.category_name, f.area_id, ar.area_name
+               COALESCE(u.full_name, u.username) AS uploaded_by, c.category_name, f.area_id, ar.area_name, " . linked_areas_select('f') . "
         FROM files f
         JOIN users u ON f.uploaded_by = u.user_id
         LEFT JOIN file_categories c ON f.category_id = c.category_id
@@ -72,8 +73,10 @@ if ($filter_program) {
 if ($filter_area === 'n') {
     $where[] = 'f.area_id IS NULL';
 } elseif ($filter_area !== '') {
-    $where[]  = 'f.area_id = ?';
-    $types   .= 'i';
+    // files whose main Area is this one, plus files that are linked to it
+    $where[]  = '(f.area_id = ? OR f.file_id IN (SELECT l.file_id FROM file_area_links l WHERE l.area_id = ?))';
+    $types   .= 'ii';
+    $params[] = $filter_area;
     $params[] = $filter_area;
 }
 if ($filter_status !== '') {
@@ -216,7 +219,7 @@ $is_filtered = ($filter_program || $filter_status !== '' || $filter_area !== '' 
                         <?php foreach ($rows as $f): ?>
                             <tr>
                                 <td><?= htmlspecialchars(display_name($f['file_path'])) ?></td>
-                                <td><?= htmlspecialchars($f['category_name'] ?? '—') ?><?php if ($f['area_name']): ?> <span class="badge-area"><?= htmlspecialchars($f['area_name']) ?></span><?php endif; ?></td>
+                                <td><?= htmlspecialchars($f['category_name'] ?? '—') ?><?php if ($f['area_name']): ?> <span class="badge-area"><?= htmlspecialchars($f['area_name']) ?></span><?php endif; ?><?= linked_badge_html($f['linked_areas']) ?></td>
                                 <td><?= htmlspecialchars($f['uploaded_by']) ?></td>
                                 <td>
                                     <span class="badge badge-status-<?= htmlspecialchars($f['status']) ?>">

@@ -3,6 +3,7 @@ require_once __DIR__ . '/../includes/check.php';
 require_role('program');
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/helpers.php';
+require_once __DIR__ . '/../includes/area_links.php';
 
 $active_page = 'files';
 
@@ -59,7 +60,7 @@ if ($filter_area !== 'n') {
 
 // program_id is ALWAYS part of the query: a Program user can never see another program's files
 $sql = "SELECT f.file_id, f.file_path, f.status, f.created_at, f.is_archived, f.program_id,
-               c.category_name, f.area_id, ar.area_name,
+               c.category_name, f.area_id, ar.area_name, " . linked_areas_select('f') . ",
                COALESCE(u.full_name, u.username) AS sent_by,
                (SELECT l.remarks FROM file_logs l
                  WHERE l.file_id = f.file_id AND l.action = 'flagged_for_revision'
@@ -78,8 +79,10 @@ if (!$show_archived) {
 if ($filter_area === 'n') {
     $sql .= " AND f.area_id IS NULL";
 } elseif ($filter_area !== '') {
-    $sql    .= " AND f.area_id = ?";
-    $types  .= 'i';
+    // files whose main Area is this one, plus files that are linked to it
+    $sql    .= " AND (f.area_id = ? OR f.file_id IN (SELECT l.file_id FROM file_area_links l WHERE l.area_id = ?))";
+    $types  .= 'ii';
+    $params[] = $filter_area;
     $params[] = $filter_area;
 }
 if ($filter_status !== '') {
@@ -132,6 +135,10 @@ $is_filtered = ($filter_status !== '' || $filter_area !== '' || $search !== '' |
         <div class="alert alert-success">File replaced. The old one was moved to your archive and QA was told.</div>
     <?php elseif ($flash === 'deleted'): ?>
         <div class="alert alert-success">File deleted. QA was told.</div>
+    <?php elseif ($flash === 'links_saved'): ?>
+        <div class="alert alert-success">Links saved. The file now shows up in the areas you ticked.</div>
+    <?php elseif ($flash === 'cannot_link'): ?>
+        <div class="alert alert-error">That file can't be linked. Only your own current files inside an area can be linked.</div>
     <?php elseif ($flash === 'cannot_replace'): ?>
         <div class="alert alert-error">That file can't be replaced anymore. QA may have already started on it, or it was already replaced.</div>
     <?php elseif ($flash === 'cannot_delete'): ?>
@@ -242,7 +249,7 @@ $is_filtered = ($filter_status !== '' || $filter_area !== '' || $search !== '' |
                                 </div>
                             <?php endif; ?>
                         </td>
-                        <td><?= htmlspecialchars($f['category_name'] ?? '—') ?><?php if ($f['area_name']): ?> <span class="badge-area"><?= htmlspecialchars($f['area_name']) ?></span><?php endif; ?></td>
+                        <td><?= htmlspecialchars($f['category_name'] ?? '—') ?><?php if ($f['area_name']): ?> <span class="badge-area"><?= htmlspecialchars($f['area_name']) ?></span><?php endif; ?><?= linked_badge_html($f['linked_areas']) ?></td>
                         <td><?= htmlspecialchars($f['sent_by']) ?></td>
                         <td>
                             <span class="badge badge-status-<?= htmlspecialchars($f['status']) ?>">
@@ -269,6 +276,10 @@ $is_filtered = ($filter_status !== '' || $filter_area !== '' || $search !== '' |
                                         <input type="hidden" name="file_id" value="<?= (int)$f['file_id'] ?>">
                                         <button type="submit" class="btn-small btn-delete">Delete</button>
                                     </form>
+                                <?php endif; ?>
+
+                                <?php if ($f['area_id'] !== null): ?>
+                                    <a href="edit_links.php?id=<?= (int)$f['file_id'] ?>" class="btn-small btn-link">Link areas</a>
                                 <?php endif; ?>
 
                                 <?php if (!program_can_replace($f['status'])): ?>

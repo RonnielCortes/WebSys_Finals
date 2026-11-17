@@ -1501,3 +1501,19 @@ body:has(.auth-split){background:
 
 
 /**tags to link **/ 
+/* ===== IDAGDAG SA DULO NG css/style.css ===== */
+/* "also AR1, AR5" na badge (naka-link na Area) */
+.badge-linked { background: #e3f1e8; color: #185d38; border-color: #cfe9d9; }
+/* "Link areas" na button sa My Files */
+.btn-link { background: #fff4cc; color: #3d2e00; border: 1px solid #f5d96a; }
+.btn-link:hover { background: #ffeaa0; }
+
+/* ===== IDAGDAG SA DULO NG css/upload.css ===== */
+/* Tsek-tsek na "Also link to" */
+.upload-field[hidden], .link-check[hidden] { display: none; }
+.link-checks {
+    display: grid; gap: 6px; max-height: 240px; overflow-y: auto;
+    padding: 10px; border: 1px solid #ddf7e9; border-radius: 12px; background: #fff;
+}
+.link-check { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; color: #185d38; cursor: pointer; }
+.link-check input { margin-top: 3px; }

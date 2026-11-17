@@ -7,6 +7,7 @@ require_once __DIR__ . '/../includes/check.php';
 require_role('qa');
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/helpers.php';
+require_once __DIR__ . '/../includes/area_links.php';
 
 $active_page = 'files';
 
@@ -38,15 +39,19 @@ while ($r = $res->fetch_assoc()) { $areas[(int)$r['area_id']] = $r['area_name'];
 $sel_area = $_GET['area'] ?? '';
 if ($sel_area !== 'n') { $sel_area = isset($areas[(int)$sel_area]) ? (int)$sel_area : ''; }
 // ready-made SQL piece for the chosen Area ($col = the column name, with or without table alias)
-function area_cond($sel_area, $col) {
+// $idcol = the file id column. A numeric Area also takes in the files that are LINKED to that Area.
+function area_cond($sel_area, $col, $idcol) {
     if ($sel_area === 'n') { return " AND $col IS NULL"; }
-    if ($sel_area !== '')  { return " AND $col = " . (int)$sel_area; }
+    if ($sel_area !== '')  {
+        $a = (int)$sel_area;
+        return " AND ($col = $a OR $idcol IN (SELECT l.file_id FROM file_area_links l WHERE l.area_id = $a))";
+    }
     return '';
 }
 
 // Files per program (current versions), then summed up the tree
 $direct = [];
-$res = $conn->query("SELECT program_id, COUNT(*) AS c FROM files WHERE is_archived = 0" . area_cond($sel_area, 'area_id') . " GROUP BY program_id");
+$res = $conn->query("SELECT program_id, COUNT(*) AS c FROM files WHERE is_archived = 0" . area_cond($sel_area, 'area_id', 'file_id') . " GROUP BY program_id");
 while ($r = $res->fetch_assoc()) { $direct[(int)$r['program_id']] = (int)$r['c']; }
 
 function folder_count($children, $direct, $id) {
@@ -110,7 +115,7 @@ $show_files = ($sel_program > 0 || $search !== '');
 // ---------------------------------------------------------------
 $files = [];
 $sql = "SELECT f.file_id, f.file_path, f.status, f.created_at, f.program_id, f.is_archived,
-               f.category_id, c.category_name, f.area_id, ar.area_name, COALESCE(u.full_name, u.username) AS sent_by,
+               f.category_id, c.category_name, f.area_id, ar.area_name, " . linked_areas_select('f') . ", COALESCE(u.full_name, u.username) AS sent_by,
                (SELECT l.remarks FROM file_logs l
                  WHERE l.file_id = f.file_id AND l.action IN ('sent', 'resubmitted')
                  ORDER BY l.timestamp DESC, l.log_id DESC LIMIT 1) AS program_note
@@ -119,7 +124,7 @@ $sql = "SELECT f.file_id, f.file_path, f.status, f.created_at, f.program_id, f.i
         LEFT JOIN file_categories c ON f.category_id = c.category_id
         LEFT JOIN areas ar ON f.area_id = ar.area_id
         WHERE 1 = 1";
-$sql .= area_cond($sel_area, 'f.area_id');
+$sql .= area_cond($sel_area, 'f.area_id', 'f.file_id');
 $types = ''; $params = [];
 
 if (!$show_old) { $sql .= " AND f.is_archived = 0"; }
@@ -161,7 +166,7 @@ if (!$sel_category) {
         $res = $conn->query(
             "SELECT c.category_id, c.category_name, COUNT(*) AS n
              FROM files f JOIN file_categories c ON f.category_id = c.category_id
-             WHERE f.is_archived = 0" . area_cond($sel_area, 'f.area_id') . " AND f.program_id IN (" . implode(',', $ids) . ")
+             WHERE f.is_archived = 0" . area_cond($sel_area, 'f.area_id', 'f.file_id') . " AND f.program_id IN (" . implode(',', $ids) . ")
              GROUP BY c.category_id, c.category_name ORDER BY c.category_name"
         );
         while ($r = $res->fetch_assoc()) {
@@ -308,7 +313,7 @@ $is_filtered = ($sel_category || $sel_area !== '' || $sel_status !== '' || $sear
                                     <div class="pnote qf-pnote"><b>Note:</b> <?= nl2br(htmlspecialchars($pn)) ?></div>
                                 <?php endif; ?>
                             </td>
-                            <td><?php if ($f['category_name']): ?><span class="qf-cat"><?= htmlspecialchars($f['category_name']) ?></span><?php else: ?>—<?php endif; ?><?php if ($f['area_name']): ?> <span class="badge-area"><?= htmlspecialchars($f['area_name']) ?></span><?php endif; ?></td>
+                            <td><?php if ($f['category_name']): ?><span class="qf-cat"><?= htmlspecialchars($f['category_name']) ?></span><?php else: ?>—<?php endif; ?><?php if ($f['area_name']): ?> <span class="badge-area"><?= htmlspecialchars($f['area_name']) ?></span><?php endif; ?><?= linked_badge_html($f['linked_areas']) ?></td>
                             <td><?= htmlspecialchars($f['sent_by']) ?></td>
                             <td><span class="badge badge-status-<?= htmlspecialchars($f['status']) ?>"><?= htmlspecialchars(status_label($f['status'])) ?></span></td>
                             <td class="qf-date"><?= date('M d, h:i A', strtotime($f['created_at'])) ?></td>
@@ -338,7 +343,7 @@ $is_filtered = ($sel_category || $sel_area !== '' || $sel_status !== '' || $sear
                         <div class="qf-card">
                             <span class="qf-ficon qf-big qf-<?= $kc ?>"><?= htmlspecialchars($kt) ?></span>
                             <b title="<?= htmlspecialchars(display_name($f['file_path'])) ?>"><?= htmlspecialchars(display_name($f['file_path'])) ?></b>
-                            <small><?= htmlspecialchars($f['category_name'] ?? '—') ?><?= $f['area_name'] ? ' (' . htmlspecialchars($f['area_name']) . ')' : '' ?> &middot; <?= htmlspecialchars($f['sent_by']) ?></small>
+                            <small><?= htmlspecialchars($f['category_name'] ?? '—') ?><?= $f['area_name'] ? ' (' . htmlspecialchars($f['area_name']) . htmlspecialchars(linked_short_text($f['linked_areas'])) . ')' : '' ?> &middot; <?= htmlspecialchars($f['sent_by']) ?></small>
                             <span class="badge badge-status-<?= htmlspecialchars($f['status']) ?>"><?= htmlspecialchars(status_label($f['status'])) ?></span>
                             <small><?= date('M d, h:i A', strtotime($f['created_at'])) ?></small>
                             <?php $pn = program_note($f['program_note'] ?? ''); if ($pn !== ''): ?>

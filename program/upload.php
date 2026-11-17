@@ -11,6 +11,7 @@ require_once __DIR__ . '/../includes/check.php';
 require_role('program');
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/helpers.php';
+require_once __DIR__ . '/../includes/area_links.php';   // "Also link to"
 
 $active_page = 'upload';
 
@@ -83,6 +84,7 @@ $error = "";
 $is_resubmit = $old && $old['status'] === 'needs_revision';
 $selected_category = $old ? (int)$old['category_id'] : 0;
 $selected_area     = $old ? (int)$old['area_id'] : 0;     // 0 = normal file (no area); a replacement stays in the same area
+$selected_links    = $old ? area_link_ids($conn, (int)$old['file_id']) : [];   // other Areas the file is also linked to
 $choose_new   = false;   // true = the Program user picked "+ Add new category"
 $new_cat_text = "";
 $note = "";
@@ -93,6 +95,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$old) {
         $selected_area = (int)($_POST['area_id'] ?? 0);
     }
+    // the "Also link to" ticks: real Areas only, never the main one, and none for normal files
+    $selected_links = $selected_area ? clean_link_ids($_POST['link_areas'] ?? [], $areas, $selected_area) : [];
 
     if ($cat_choice === 'new') {
         // a brand-new category typed by the Program user
@@ -153,6 +157,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->execute();
                 $new_id = (int)$conn->insert_id;
                 $stmt->close();
+
+                // 1b) the extra Areas this file is also linked to (not a copy, just a mark)
+                save_area_links($conn, $new_id, $selected_links);
 
                 // 2) archive the old version (only if it is still the current one
                 //    AND its status has not changed since the page was opened)
@@ -283,6 +290,21 @@ $page_title = $is_resubmit ? 'Re-submit File' : ($old ? 'Replace File' : 'Upload
                                 <?php endforeach; ?>
                             </select>
                         <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($areas): ?>
+                    <div class="upload-field" id="link-field" <?= $selected_area ? '' : 'hidden' ?>>
+                        <span class="field-label">Also link to <span class="optional">(optional)</span></span>
+                        <div class="link-checks">
+                            <?php foreach ($areas as $aid => $a): ?>
+                                <label class="link-check" data-area="<?= $aid ?>">
+                                    <input type="checkbox" name="link_areas[]" value="<?= $aid ?>" <?= in_array($aid, $selected_links, true) ? 'checked' : '' ?>>
+                                    <?= htmlspecialchars($a['area_name'] . ($a['description'] ? ' - ' . $a['description'] : '')) ?>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                        <small class="muted">The same file will also show up in these areas. It is not copied.</small>
                     </div>
                 <?php endif; ?>
 
