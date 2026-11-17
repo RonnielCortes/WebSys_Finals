@@ -85,7 +85,7 @@ if ($row && $row['d'] !== null) {
 // Recent files (5)
 // ---------------------------------------------------------------
 $recent_files = $conn->query(
-    "SELECT f.file_id, f.file_path, f.status, f.created_at, f.program_id
+    "SELECT f.file_id, f.file_path, f.status, f.created_at, f.program_id, f.area_id
      FROM files f WHERE f.is_archived = 0
      ORDER BY f.created_at DESC LIMIT 5"
 )->fetch_all(MYSQLI_ASSOC);
@@ -217,7 +217,13 @@ function initials($name)
                         <tbody>
                             <?php foreach ($recent_files as $f): ?>
                                 <tr>
-                                    <td><a href="../download.php?id=<?= (int)$f['file_id'] ?>"><?= htmlspecialchars(display_name($f['file_path'])) ?></a></td>
+                                    <td>
+                                        <?php if ($f['area_id'] === null): ?>
+                                            <a href="../download.php?id=<?= (int)$f['file_id'] ?>"><?= htmlspecialchars(display_name($f['file_path'])) ?></a>
+                                        <?php else: ?>
+                                            <?= htmlspecialchars(display_name($f['file_path'])) ?> <small class="muted">(Confidential)</small>
+                                        <?php endif; ?>
+                                    </td>
                                     <td><?= htmlspecialchars(isset($programs[(int)$f['program_id']]) ? $programs[(int)$f['program_id']]['program_name'] : '—') ?></td>
                                     <td><span class="badge badge-status-<?= htmlspecialchars($f['status']) ?>"><?= htmlspecialchars(status_label($f['status'])) ?></span></td>
                                     <td><?= date('M d, h:i A', strtotime($f['created_at'])) ?></td>

@@ -102,3 +102,15 @@
 }
 .cat-add select.cat-for:focus { outline: none; border-color: #2ab169; box-shadow: 0 0 0 3px rgba(42, 177, 105, 0.18); }
 .cat-scope { margin: 2px 0 0; font-size: 13px; }
+
+/* IDAGDAG SA DULO NG css/categories.css: Move, Transfer at Independent sa Depts & Programs */
+.fold-tools { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; margin-bottom: 16px; }
+.fold-tools .fold-tool { margin-bottom: 0; }
+.fold-tool .cat-row { flex-wrap: wrap; }
+.fold-tool select {
+    flex: 1 1 200px; min-width: 0; max-width: 100%; box-sizing: border-box; min-height: 40px; padding: 0 12px;
+    border: 1px solid #ddf7e9; border-radius: 10px; background: #fff; color: #185d38; font: inherit; font-size: 14px;
+}
+.fold-tool select:focus { outline: none; border-color: #2ab169; box-shadow: 0 0 0 3px rgba(42, 177, 105, 0.18); }
+.fold-check { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; color: #185d38; white-space: nowrap; }
+.fold-tool select[hidden] { display: none; }

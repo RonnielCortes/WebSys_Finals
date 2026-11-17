@@ -97,6 +97,7 @@ while ($r = $res->fetch_assoc()) {
     }
 }
 if (!isset($categories[$sel_category])) { $sel_category = 0; }
+if ($sel_category && !isset($chip_categories[$sel_category])) { $sel_category = 0; }   // it belongs to another Area
 
 // ---------------------------------------------------------------
 // The file list is NOT shown by default. It appears only after QA opens a
@@ -232,10 +233,23 @@ $is_filtered = ($sel_category || $sel_area !== '' || $sel_status !== '' || $sear
 
             <form method="GET" action="files.php" class="qf-tools">
                 <input type="hidden" name="program" value="<?= $sel_program ?>">
-                <input type="hidden" name="category" value="<?= $sel_category ?>">
-                <input type="hidden" name="area" value="<?= htmlspecialchars((string)$sel_area) ?>">
                 <input type="hidden" name="view" value="<?= $view ?>">
                 <input type="text" name="q" value="<?= htmlspecialchars($search) ?>" placeholder="Search file name...">
+                <?php if ($areas): ?>
+                <select name="area" aria-label="Area" data-autosubmit>
+                    <option value="">Area: All</option>
+                    <option value="n" <?= $sel_area === 'n' ? 'selected' : '' ?>>Normal files (no area)</option>
+                    <?php foreach ($areas as $aid => $aname): ?>
+                        <option value="<?= $aid ?>" <?= $sel_area === $aid ? 'selected' : '' ?>><?= htmlspecialchars($aname) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <?php endif; ?>
+                <select name="category" aria-label="Category" data-autosubmit>
+                    <option value="0">Category: All</option>
+                    <?php foreach ($chip_categories as $cid => $cname): ?>
+                        <option value="<?= $cid ?>" <?= $sel_category === $cid ? 'selected' : '' ?>><?= htmlspecialchars($cname) ?></option>
+                    <?php endforeach; ?>
+                </select>
                 <select name="status" aria-label="Status">
                     <option value="">Status: All</option>
                     <?php foreach (file_statuses() as $s): ?>
@@ -255,24 +269,6 @@ $is_filtered = ($sel_category || $sel_area !== '' || $sel_status !== '' || $sear
                     <a class="<?= $view === 'grid' ? 'on' : '' ?>" href="<?= htmlspecialchars(qurl(['view' => 'grid'])) ?>">Grid</a>
                 </div>
             </form>
-
-            <?php if ($areas): ?>
-            <div class="qf-chips qf-areas">
-                <span class="qf-lab">Area</span>
-                <a class="qf-chip<?= $sel_area === '' ? ' on' : '' ?>" href="<?= htmlspecialchars(qurl(['area' => '', 'category' => 0])) ?>">All</a>
-                <a class="qf-chip<?= $sel_area === 'n' ? ' on' : '' ?>" href="<?= htmlspecialchars(qurl(['area' => 'n', 'category' => 0])) ?>">Normal files</a>
-                <?php foreach ($areas as $aid => $aname): ?>
-                    <a class="qf-chip<?= $sel_area === $aid ? ' on' : '' ?>" href="<?= htmlspecialchars(qurl(['area' => $aid, 'category' => 0])) ?>"><?= htmlspecialchars($aname) ?></a>
-                <?php endforeach; ?>
-            </div>
-            <?php endif; ?>
-
-            <div class="qf-chips">
-                <a class="qf-chip<?= $sel_category === 0 ? ' on' : '' ?>" href="<?= htmlspecialchars(qurl(['category' => 0])) ?>">All categories</a>
-                <?php foreach ($chip_categories as $cid => $cname): ?>
-                    <a class="qf-chip<?= $sel_category === $cid ? ' on' : '' ?>" href="<?= htmlspecialchars(qurl(['category' => $cid])) ?>"><?= htmlspecialchars($cname) ?></a>
-                <?php endforeach; ?>
-            </div>
 
             <?php if ($cards): ?>
                 <div class="qf-sec"><?= htmlspecialchars($cards_title) ?></div>
@@ -357,5 +353,6 @@ $is_filtered = ($sel_category || $sel_area !== '' || $sel_status !== '' || $sear
         </section>
     </div>
 </main>
+    <script src="../js/qa_files.js?v=<?= @filemtime(__DIR__ . '/../js/qa_files.js') ?>"></script>
 </body>
 </html>
