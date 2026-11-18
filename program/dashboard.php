@@ -4,30 +4,38 @@ require_role('program');
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/accreditation.php';
-require_once __DIR__ . '/../includes/area_links.php';
 
 $active_page = 'files';
 
-// A user can belong to several programs/offices: they see the files of all of them
+// A user can belong to several programs/offices:
+// they see the files of all of them.
 $unit_ids = session_program_ids();
+
 if (!$unit_ids) {
     die("Your account is not assigned to a program/office yet. Please contact the Admin.");
 }
-$unit_list    = id_list($unit_ids);          // integers only, safe inside IN (...)
+
+$unit_list    = id_list($unit_ids);
 $unit_names   = program_names($conn, $unit_ids);
 $multi_unit   = count($unit_ids) > 1;
 $program_name = $unit_names ? implode(', ', $unit_names) : 'Your program';
 
 $flash = $_GET['flash'] ?? '';
 
+
 // --------------------------------------------
-// Stat cards (current versions only, THIS program only)
+// Stat cards
 // --------------------------------------------
 $counts = array_fill_keys(file_statuses(), 0);
+
 $res = $conn->query(
-    "SELECT status, COUNT(*) AS c FROM files
-     WHERE program_id IN ($unit_list) AND is_archived = 0 GROUP BY status"
+    "SELECT status, COUNT(*) AS c
+     FROM files
+     WHERE program_id IN ($unit_list)
+       AND is_archived = 0
+     GROUP BY status"
 );
+
 while ($r = $res->fetch_assoc()) {
     $counts[$r['status']] = (int)$r['c'];
 }
@@ -36,6 +44,7 @@ $total    = array_sum($counts);
 $waiting  = $counts['sent'] + $counts['received'] + $counts['under_review'];
 $revision = $counts['needs_revision'];
 $approved = $counts['approved'];
+
 
 // --------------------------------------------
 // Filters
@@ -48,252 +57,889 @@ if (!in_array($filter_status, file_statuses(), true)) {
     $filter_status = '';
 }
 
-// Area filter: '' = every file, 'n' = normal files only, a number = one Area
+
+// --------------------------------------------
+// Available Areas
+// --------------------------------------------
 $areas = [];
-foreach (load_areas($conn, accessible_area_ids($conn, $unit_ids)) as $aid => $r) {   // only the Areas this unit is designated for
+
+foreach (
+    load_areas(
+        $conn,
+        accessible_area_ids($conn, $unit_ids)
+    ) as $aid => $r
+) {
     $areas[$aid] = $r['area_name'];
 }
+
+
+// --------------------------------------------
+// Area filter
+//
+// '' = all files
+// 'n' = normal files without Area
+// number = specific Area
+// --------------------------------------------
 $filter_area = $_GET['area'] ?? '';
+
 if ($filter_area !== 'n') {
-    $filter_area = isset($areas[(int)$filter_area]) ? (int)$filter_area : '';
+    $filter_area = isset($areas[(int)$filter_area])
+        ? (int)$filter_area
+        : '';
 }
 
-// program_id is ALWAYS part of the query: a Program user can never see another program's files
-$sql = "SELECT f.file_id, f.file_path, f.status, f.created_at, f.is_archived, f.program_id,
-               c.category_name, f.area_id, ar.area_name, " . linked_areas_select('f') . ",
-               COALESCE(u.full_name, u.username) AS sent_by,
-               (SELECT l.remarks FROM file_logs l
-                 WHERE l.file_id = f.file_id AND l.action = 'flagged_for_revision'
-                 ORDER BY l.timestamp DESC, l.log_id DESC LIMIT 1) AS qa_remark
+
+// --------------------------------------------
+// Load files
+//
+// IMPORTANT:
+// A file has only ONE main Area.
+// There is NO longer any "linked area" system.
+// --------------------------------------------
+$sql = "SELECT
+            f.file_id,
+            f.file_path,
+            f.status,
+            f.created_at,
+            f.is_archived,
+            f.program_id,
+            c.category_name,
+            f.area_id,
+            ar.area_name,
+            COALESCE(u.full_name, u.username) AS sent_by,
+
+            (
+                SELECT l.remarks
+                FROM file_logs l
+                WHERE l.file_id = f.file_id
+                  AND l.action = 'flagged_for_revision'
+                ORDER BY l.timestamp DESC, l.log_id DESC
+                LIMIT 1
+            ) AS qa_remark
+
         FROM files f
-        JOIN users u ON f.uploaded_by = u.user_id
-        LEFT JOIN file_categories c ON f.category_id = c.category_id
-        LEFT JOIN areas ar ON f.area_id = ar.area_id
+
+        JOIN users u
+            ON f.uploaded_by = u.user_id
+
+        LEFT JOIN file_categories c
+            ON f.category_id = c.category_id
+
+        LEFT JOIN areas ar
+            ON f.area_id = ar.area_id
+
         WHERE f.program_id IN ($unit_list)";
+
 $types  = '';
 $params = [];
 
+
+// --------------------------------------------
+// Archived filter
+// --------------------------------------------
 if (!$show_archived) {
     $sql .= " AND f.is_archived = 0";
 }
+
+
+// --------------------------------------------
+// Area filter
+//
+// A file belongs ONLY to its selected Area.
+// --------------------------------------------
 if ($filter_area === 'n') {
+
     $sql .= " AND f.area_id IS NULL";
+
 } elseif ($filter_area !== '') {
-    // files whose main Area is this one, plus files that are linked to it
-    $sql    .= " AND (f.area_id = ? OR f.file_id IN (SELECT l.file_id FROM file_area_links l WHERE l.area_id = ?))";
-    $types  .= 'ii';
-    $params[] = $filter_area;
+
+    $sql .= " AND f.area_id = ?";
+
+    $types .= 'i';
     $params[] = $filter_area;
 }
+
+
+// --------------------------------------------
+// Status filter
+// --------------------------------------------
 if ($filter_status !== '') {
-    $sql    .= " AND f.status = ?";
-    $types  .= 's';
+
+    $sql .= " AND f.status = ?";
+
+    $types .= 's';
     $params[] = $filter_status;
 }
+
+
+// --------------------------------------------
+// Search
+// --------------------------------------------
 if ($search !== '') {
-    $sql    .= " AND f.file_path LIKE ?";
-    $types  .= 's';
-    $params[] = '%' . addcslashes($search, '%_\\') . '%';
+
+    $sql .= " AND f.file_path LIKE ?";
+
+    $types .= 's';
+    $params[] = '%' . addcslashes(
+        $search,
+        '%_\\'
+    ) . '%';
 }
+
+
+// --------------------------------------------
+// Sort
+// --------------------------------------------
 $sql .= " ORDER BY f.created_at DESC";
 
+
+// --------------------------------------------
+// Execute
+// --------------------------------------------
 $stmt = $conn->prepare($sql);
+
 if ($params) {
-    $stmt->bind_param($types, ...$params);
+    $stmt->bind_param(
+        $types,
+        ...$params
+    );
 }
+
 $stmt->execute();
-$files = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+$files = $stmt
+    ->get_result()
+    ->fetch_all(MYSQLI_ASSOC);
+
 $stmt->close();
 
-$is_filtered = ($filter_status !== '' || $filter_area !== '' || $search !== '' || $show_archived);
+
+// --------------------------------------------
+// Check if filters are active
+// --------------------------------------------
+$is_filtered = (
+    $filter_status !== '' ||
+    $filter_area !== '' ||
+    $search !== '' ||
+    $show_archived
+);
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<title>My Files</title>
-<link rel="stylesheet" href="../css/style.css?v=<?= @filemtime(__DIR__ . '/../css/style.css') ?>">
+
+    <meta charset="UTF-8">
+
+    <title>My Files</title>
+
+    <link
+        rel="stylesheet"
+        href="../css/style.css?v=<?= @filemtime(
+            __DIR__ . '/../css/style.css'
+        ) ?>"
+    >
+
 </head>
+
+
 <body class="with-sidebar">
+
 
 <?php include __DIR__ . '/../includes/program_sidebar.php'; ?>
 
+
 <main class="main-content">
+
+
+    <!-- =========================================
+         PAGE HEADER
+    ========================================== -->
+
     <div class="page-top">
+
         <div>
+
             <h2>My Files</h2>
-           <p class="muted"><?= htmlspecialchars($program_name) ?> &middot; welcome, <strong class="welcome-name"><?= htmlspecialchars(session_display_name($conn)) ?></strong>!</p>
+
+            <p class="muted">
+
+                <?= htmlspecialchars($program_name) ?>
+
+                &middot;
+
+                welcome,
+
+                <strong class="welcome-name">
+                    <?= htmlspecialchars(
+                        session_display_name($conn)
+                    ) ?>
+                </strong>!
+
+            </p>
+
         </div>
-        <div class="top-date"><?= date('D, M d, Y') ?></div>
+
+
+        <div class="top-date">
+            <?= date('D, M d, Y') ?>
+        </div>
+
     </div>
+
+
+    <!-- =========================================
+         FLASH MESSAGES
+    ========================================== -->
 
     <?php if ($flash === 'uploaded'): ?>
-        <div class="alert alert-success">File sent to QA.</div>
+
+        <div class="alert alert-success">
+            File sent to QA.
+        </div>
+
+
     <?php elseif ($flash === 'resubmitted'): ?>
-        <div class="alert alert-success">New version sent to QA. The old version was moved to your archive.</div>
+
+        <div class="alert alert-success">
+            New version sent to QA.
+            The old version was moved to your archive.
+        </div>
+
+
     <?php elseif ($flash === 'replaced'): ?>
-        <div class="alert alert-success">File replaced. The old one was moved to your archive and QA was told.</div>
+
+        <div class="alert alert-success">
+            File replaced.
+            The old one was moved to your archive and QA was told.
+        </div>
+
+
     <?php elseif ($flash === 'deleted'): ?>
-        <div class="alert alert-success">File deleted. QA was told.</div>
-    <?php elseif ($flash === 'links_saved'): ?>
-        <div class="alert alert-success">Links saved. The file now shows up in the areas you ticked.</div>
-    <?php elseif ($flash === 'cannot_link'): ?>
-        <div class="alert alert-error">That file can't be linked. Only your own current files inside an area can be linked.</div>
+
+        <div class="alert alert-success">
+            File deleted.
+            QA was told.
+        </div>
+
+
     <?php elseif ($flash === 'cannot_replace'): ?>
-        <div class="alert alert-error">That file can't be replaced anymore. QA may have already started on it, or it was already replaced.</div>
+
+        <div class="alert alert-error">
+            That file can't be replaced anymore.
+            QA may have already started on it,
+            or it was already replaced.
+        </div>
+
+
     <?php elseif ($flash === 'cannot_delete'): ?>
-        <div class="alert alert-error">That file can't be deleted anymore. QA may have already started on it.</div>
+
+        <div class="alert alert-error">
+            That file can't be deleted anymore.
+            QA may have already started on it.
+        </div>
+
     <?php endif; ?>
+
+
+    <!-- =========================================
+         STATISTICS
+    ========================================== -->
 
     <div class="stats-row">
+
+
         <div class="stat-card">
-            <span class="stat-number"><?= $total ?></span>
-            <span class="stat-label">Files sent</span>
+
+            <span class="stat-number">
+                <?= $total ?>
+            </span>
+
+            <span class="stat-label">
+                Files sent
+            </span>
+
         </div>
+
+
         <div class="stat-card">
-            <span class="stat-number"><?= $waiting ?></span>
-            <span class="stat-label">Waiting for QA</span>
+
+            <span class="stat-number">
+                <?= $waiting ?>
+            </span>
+
+            <span class="stat-label">
+                Waiting for QA
+            </span>
+
         </div>
+
+
         <div class="stat-card">
-            <span class="stat-number"><?= $revision ?></span>
-            <span class="stat-label">Needs revision</span>
+
+            <span class="stat-number">
+                <?= $revision ?>
+            </span>
+
+            <span class="stat-label">
+                Needs revision
+            </span>
+
         </div>
+
+
         <div class="stat-card">
-            <span class="stat-number"><?= $approved ?></span>
-            <span class="stat-label">Approved</span>
+
+            <span class="stat-number">
+                <?= $approved ?>
+            </span>
+
+            <span class="stat-label">
+                Approved
+            </span>
+
         </div>
+
+
     </div>
 
+
+    <!-- =========================================
+         REVISION NOTICE
+    ========================================== -->
+
     <?php if ($revision > 0): ?>
+
         <div class="alert alert-error">
-            QA asked you to fix <?= $revision ?> file(s). Use <strong>Re-submit</strong> on the file below.
+
+            QA asked you to fix
+            <?= $revision ?>
+            file(s).
+
+            Use
+            <strong>Re-submit</strong>
+            on the file below.
+
         </div>
+
     <?php endif; ?>
 
-    <form method="GET" action="dashboard.php" class="filter-bar">
+
+    <!-- =========================================
+         FILTERS
+    ========================================== -->
+
+    <form
+        method="GET"
+        action="dashboard.php"
+        class="filter-bar"
+    >
+
+
+        <!-- STATUS -->
+
         <div class="filter-field">
-            <label for="status">Status</label>
-            <select name="status" id="status">
-                <option value="">All</option>
+
+            <label for="status">
+                Status
+            </label>
+
+            <select
+                name="status"
+                id="status"
+            >
+
+                <option value="">
+                    All
+                </option>
+
+
                 <?php foreach (file_statuses() as $s): ?>
-                    <option value="<?= $s ?>" <?= $filter_status === $s ? 'selected' : '' ?>>
-                        <?= htmlspecialchars(status_label($s)) ?>
+
+                    <option
+                        value="<?= htmlspecialchars($s) ?>"
+                        <?= $filter_status === $s
+                            ? 'selected'
+                            : '' ?>
+                    >
+
+                        <?= htmlspecialchars(
+                            status_label($s)
+                        ) ?>
+
                     </option>
+
                 <?php endforeach; ?>
+
             </select>
+
         </div>
+
+
+        <!-- AREA -->
 
         <?php if ($areas): ?>
-        <div class="filter-field">
-            <label for="area">Area</label>
-            <select name="area" id="area">
-                <option value="">All</option>
-                <option value="n" <?= $filter_area === 'n' ? 'selected' : '' ?>>Normal files (no area)</option>
-                <?php foreach ($areas as $aid => $aname): ?>
-                    <option value="<?= $aid ?>" <?= $filter_area === $aid ? 'selected' : '' ?>><?= htmlspecialchars($aname) ?></option>
-                <?php endforeach; ?>
-            </select>
-        </div>
+
+            <div class="filter-field">
+
+                <label for="area">
+                    Area
+                </label>
+
+
+                <select
+                    name="area"
+                    id="area"
+                >
+
+                    <option value="">
+                        All
+                    </option>
+
+
+                    <option
+                        value="n"
+                        <?= $filter_area === 'n'
+                            ? 'selected'
+                            : '' ?>
+                    >
+                        Normal files (no area)
+                    </option>
+
+
+                    <?php foreach ($areas as $aid => $aname): ?>
+
+                        <option
+                            value="<?= $aid ?>"
+                            <?= $filter_area === $aid
+                                ? 'selected'
+                                : '' ?>
+                        >
+
+                            <?= htmlspecialchars($aname) ?>
+
+                        </option>
+
+                    <?php endforeach; ?>
+
+                </select>
+
+            </div>
+
         <?php endif; ?>
 
-        <div class="filter-field">
-            <label for="q">File name</label>
-            <input type="text" name="q" id="q" value="<?= htmlspecialchars($search) ?>" placeholder="Search...">
-        </div>
+
+        <!-- SEARCH -->
 
         <div class="filter-field">
-            <span class="filter-spacer" aria-hidden="true">&nbsp;</span>
-            <label class="check-label">
-                <input type="checkbox" name="archived" value="1" <?= $show_archived ? 'checked' : '' ?>>
-                Include archived versions
+
+            <label for="q">
+                File name
             </label>
+
+            <input
+                type="text"
+                name="q"
+                id="q"
+                value="<?= htmlspecialchars($search) ?>"
+                placeholder="Search..."
+            >
+
         </div>
 
-        <button type="submit">Filter</button>
+
+        <!-- ARCHIVED -->
+
+        <div class="filter-field">
+
+            <span
+                class="filter-spacer"
+                aria-hidden="true"
+            >
+                &nbsp;
+            </span>
+
+
+            <label class="check-label">
+
+                <input
+                    type="checkbox"
+                    name="archived"
+                    value="1"
+                    <?= $show_archived
+                        ? 'checked'
+                        : '' ?>
+                >
+
+                Include archived versions
+
+            </label>
+
+        </div>
+
+
+        <button type="submit">
+            Filter
+        </button>
+
+
         <?php if ($is_filtered): ?>
-            <a href="dashboard.php" class="btn-reset">Reset</a>
+
+            <a
+                href="dashboard.php"
+                class="btn-reset"
+            >
+                Reset
+            </a>
+
         <?php endif; ?>
-        <a href="upload.php" class="btn-small btn-download btn-right">+ Upload File</a>
+
+
+        <a
+            href="upload.php"
+            class="btn-small btn-download btn-right"
+        >
+            + Upload File
+        </a>
+
+
     </form>
 
+
+    <!-- =========================================
+         FILE LIST
+    ========================================== -->
+
     <?php if (empty($files)): ?>
+
+
         <div class="empty-state">
-            <?= $is_filtered ? 'No files match your filters.' : 'You have not sent any files yet.' ?>
+
+            <?= $is_filtered
+                ? 'No files match your filters.'
+                : 'You have not sent any files yet.'
+            ?>
+
+
             <?php if (!$is_filtered): ?>
-                <br><a href="upload.php">Upload your first file</a>
+
+                <br>
+
+                <a href="upload.php">
+                    Upload your first file
+                </a>
+
             <?php endif; ?>
+
         </div>
+
+
     <?php else: ?>
+
+
         <table class="data-table">
+
+
             <thead>
+
                 <tr>
-                    <th>File</th>
-                    <th>Category</th>
-                    <th>Sent by</th>
-                    <th>Status</th>
-                    <th>Date</th>
-                    <th>Actions</th>
+
+                    <th>
+                        File
+                    </th>
+
+                    <th>
+                        Category
+                    </th>
+
+                    <th>
+                        Sent by
+                    </th>
+
+                    <th>
+                        Status
+                    </th>
+
+                    <th>
+                        Date
+                    </th>
+
+                    <th>
+                        Actions
+                    </th>
+
                 </tr>
+
             </thead>
+
+
             <tbody>
+
+
                 <?php foreach ($files as $f): ?>
+
                     <tr>
+
+
+                        <!-- FILE -->
+
                         <td>
-                            <?= htmlspecialchars(display_name($f['file_path'])) ?>
-                            <?php if ($multi_unit && isset($unit_names[(int)$f['program_id']])): ?>
-                                <br><small class="muted"><?= htmlspecialchars($unit_names[(int)$f['program_id']]) ?></small>
+
+                            <?= htmlspecialchars(
+                                display_name(
+                                    $f['file_path']
+                                )
+                            ) ?>
+
+
+                            <?php if (
+                                $multi_unit &&
+                                isset(
+                                    $unit_names[
+                                        (int)$f['program_id']
+                                    ]
+                                )
+                            ): ?>
+
+                                <br>
+
+                                <small class="muted">
+
+                                    <?= htmlspecialchars(
+                                        $unit_names[
+                                            (int)$f['program_id']
+                                        ]
+                                    ) ?>
+
+                                </small>
+
                             <?php endif; ?>
-                            <?php if ($f['status'] === 'needs_revision' && !$f['is_archived'] && $f['qa_remark']): ?>
+
+
+                            <?php if (
+                                $f['status'] === 'needs_revision' &&
+                                !$f['is_archived'] &&
+                                $f['qa_remark']
+                            ): ?>
+
                                 <div class="remark-box">
-                                    <strong>QA note:</strong> <?= htmlspecialchars($f['qa_remark']) ?>
+
+                                    <strong>
+                                        QA note:
+                                    </strong>
+
+                                    <?= htmlspecialchars(
+                                        $f['qa_remark']
+                                    ) ?>
+
                                 </div>
+
                             <?php endif; ?>
+
                         </td>
-                        <td><?= htmlspecialchars($f['category_name'] ?? '—') ?><?php if ($f['area_name']): ?> <span class="badge-area"><?= htmlspecialchars($f['area_name']) ?></span><?php endif; ?><?= linked_badge_html($f['linked_areas']) ?></td>
-                        <td><?= htmlspecialchars($f['sent_by']) ?></td>
+
+
+                        <!-- CATEGORY + AREA -->
+
                         <td>
-                            <span class="badge badge-status-<?= htmlspecialchars($f['status']) ?>">
-                                <?= htmlspecialchars(status_label($f['status'])) ?>
-                            </span>
-                            <?php if ($f['is_archived']): ?>
-                                <span class="badge badge-archived">Archived</span>
+
+                            <?= htmlspecialchars(
+                                $f['category_name'] ?? '—'
+                            ) ?>
+
+
+                            <?php if ($f['area_name']): ?>
+
+                                <span class="badge-area">
+
+                                    <?= htmlspecialchars(
+                                        $f['area_name']
+                                    ) ?>
+
+                                </span>
+
                             <?php endif; ?>
+
                         </td>
-                        <td><?= date('M d, Y h:i A', strtotime($f['created_at'])) ?></td>
+
+
+                        <!-- SENT BY -->
+
+                        <td>
+
+                            <?= htmlspecialchars(
+                                $f['sent_by']
+                            ) ?>
+
+                        </td>
+
+
+                        <!-- STATUS -->
+
+                        <td>
+
+                            <span
+                                class="badge badge-status-<?= htmlspecialchars(
+                                    $f['status']
+                                ) ?>"
+                            >
+
+                                <?= htmlspecialchars(
+                                    status_label(
+                                        $f['status']
+                                    )
+                                ) ?>
+
+                            </span>
+
+
+                            <?php if ($f['is_archived']): ?>
+
+                                <span class="badge badge-archived">
+                                    Archived
+                                </span>
+
+                            <?php endif; ?>
+
+                        </td>
+
+
+                        <!-- DATE -->
+
+                        <td>
+
+                            <?= date(
+                                'M d, Y h:i A',
+                                strtotime(
+                                    $f['created_at']
+                                )
+                            ) ?>
+
+                        </td>
+
+
+                        <!-- ACTIONS -->
+
                         <td class="actions-cell program-actions">
-                            <a href="../download.php?id=<?= (int)$f['file_id'] ?>" class="btn-small btn-download">Download</a>
+
+
+                            <a
+                                href="../download.php?id=<?= (int)$f['file_id'] ?>"
+                                class="btn-small btn-download"
+                            >
+                                Download
+                            </a>
+
 
                             <?php if (!$f['is_archived']): ?>
-                                <?php if ($f['status'] === 'needs_revision'): ?>
-                                    <a href="upload.php?replace=<?= (int)$f['file_id'] ?>" class="btn-small btn-resubmit">Re-submit</a>
-                                <?php elseif (program_can_replace($f['status'])): ?>
-                                    <a href="upload.php?replace=<?= (int)$f['file_id'] ?>" class="btn-small btn-replace">Replace</a>
+
+
+                                <?php if (
+                                    $f['status'] === 'needs_revision'
+                                ): ?>
+
+                                    <a
+                                        href="upload.php?replace=<?= (int)$f['file_id'] ?>"
+                                        class="btn-small btn-resubmit"
+                                    >
+                                        Re-submit
+                                    </a>
+
+
+                                <?php elseif (
+                                    program_can_replace(
+                                        $f['status']
+                                    )
+                                ): ?>
+
+                                    <a
+                                        href="upload.php?replace=<?= (int)$f['file_id'] ?>"
+                                        class="btn-small btn-replace"
+                                    >
+                                        Replace
+                                    </a>
+
                                 <?php endif; ?>
 
-                                <?php if (program_can_delete($f['status'])): ?>
-                                    <form method="POST" action="delete.php" class="js-confirm-delete"
-                                          data-filename="<?= htmlspecialchars(display_name($f['file_path'])) ?>">
-                                        <input type="hidden" name="file_id" value="<?= (int)$f['file_id'] ?>">
-                                        <button type="submit" class="btn-small btn-delete">Delete</button>
+
+                                <?php if (
+                                    program_can_delete(
+                                        $f['status']
+                                    )
+                                ): ?>
+
+                                    <form
+                                        method="POST"
+                                        action="delete.php"
+                                        class="js-confirm-delete"
+                                        data-filename="<?= htmlspecialchars(
+                                            display_name(
+                                                $f['file_path']
+                                            )
+                                        ) ?>"
+                                    >
+
+                                        <input
+                                            type="hidden"
+                                            name="file_id"
+                                            value="<?= (int)$f['file_id'] ?>"
+                                        >
+
+
+                                        <button
+                                            type="submit"
+                                            class="btn-small btn-delete"
+                                        >
+                                            Delete
+                                        </button>
+
                                     </form>
+
                                 <?php endif; ?>
 
-                                <?php if ($f['area_id'] !== null): ?>
-                                    <a href="edit_links.php?id=<?= (int)$f['file_id'] ?>" class="btn-small btn-link">Link areas</a>
+
+                                <?php if (
+                                    !program_can_replace(
+                                        $f['status']
+                                    )
+                                ): ?>
+
+                                    <span class="lock-note">
+                                        Locked
+                                    </span>
+
                                 <?php endif; ?>
 
-                                <?php if (!program_can_replace($f['status'])): ?>
-                                    <span class="lock-note">Locked</span>
-                                <?php endif; ?>
+
                             <?php endif; ?>
+
+
                         </td>
+
                     </tr>
+
                 <?php endforeach; ?>
+
+
             </tbody>
+
         </table>
+
+
     <?php endif; ?>
+
+
 </main>
 
-<script src="../js/main.js?v=<?= @filemtime(__DIR__ . '/../js/main.js') ?>"></script>
+
+<script
+    src="../js/main.js?v=<?= @filemtime(
+        __DIR__ . '/../js/main.js'
+    ) ?>"
+></script>
+
+
 </body>
+
 </html>
