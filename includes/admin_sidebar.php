@@ -16,7 +16,7 @@ if (isset($conn)) {
         <?= nav_link('/websys/admin/files.php', 'files', 'Files', $active_page === 'files') ?>
         <?= nav_link('/websys/admin/archive.php', 'archive', 'Archived Files', $active_page === 'archive') ?>
         <?= nav_link('/websys/admin/folders.php', 'sitemap', 'Depts & Programs', $active_page === 'folders') ?>
-        <?= nav_link('/websys/admin/areas.php', 'folder', 'Areas', $active_page === 'areas') ?>
+        <?= nav_link('/websys/admin/areas.php', 'folder', 'Accreditation', $active_page === 'areas') ?>
         <?= nav_link('/websys/admin/unit_types.php', 'sitemap', 'Folder Types', $active_page === 'unit_types') ?>
     </nav>
     <?= sidebar_user($conn ?? null) ?>

@@ -10,6 +10,7 @@ require_once __DIR__ . '/../includes/check.php';
 require_role('qa');
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/helpers.php';
+require_once __DIR__ . '/../includes/accreditation.php';
 
 $active_page = 'categories';
 
@@ -20,9 +21,8 @@ $csrf = $_SESSION['csrf'];
 
 // The Areas (set by the Admin)
 $areas = [];
-$res = $conn->query("SELECT area_id, area_name, description FROM areas ORDER BY sort_order, area_id");
-while ($r = $res->fetch_assoc()) {
-    $areas[(int)$r['area_id']] = $r;
+foreach (load_areas($conn) as $aid => $r) {
+    $areas[$aid] = $r;   // area_name = "PACUCOA · Area 1"
 }
 
 $error    = "";

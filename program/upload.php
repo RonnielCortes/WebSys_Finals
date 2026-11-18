@@ -12,6 +12,7 @@ require_role('program');
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/area_links.php';   // "Also link to"
+require_once __DIR__ . '/../includes/accreditation.php';
 
 $active_page = 'upload';
 
@@ -37,11 +38,9 @@ while ($row = $cat_result->fetch_assoc()) {
 }
 
 // Areas for the dropdown (Area I, Area II, ... set by the Admin)
-$areas = [];
-$area_result = $conn->query("SELECT area_id, area_name, description FROM areas ORDER BY sort_order, area_id");
-while ($row = $area_result->fetch_assoc()) {
-    $areas[(int)$row['area_id']] = $row;
-}
+// Only the Areas of the accreditation bodies this program/office is designated for
+$my_area_ids = accessible_area_ids($conn, $unit_ids);
+$areas = load_areas($conn, $my_area_ids);
 
 // --------------------------------------------
 // Re-submit mode: the file being replaced must belong to THIS program,
@@ -84,6 +83,9 @@ $error = "";
 $is_resubmit = $old && $old['status'] === 'needs_revision';
 $selected_category = $old ? (int)$old['category_id'] : 0;
 $selected_area     = $old ? (int)$old['area_id'] : 0;     // 0 = normal file (no area); a replacement stays in the same area
+if ($selected_area && !isset($areas[$selected_area])) {   // the old file's Area is shown even if the designation changed since
+    $areas = $areas + load_areas($conn, [$selected_area]);
+}
 $selected_links    = $old ? area_link_ids($conn, (int)$old['file_id']) : [];   // other Areas the file is also linked to
 $choose_new   = false;   // true = the Program user picked "+ Add new category"
 $new_cat_text = "";

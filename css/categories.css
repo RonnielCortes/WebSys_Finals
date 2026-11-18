@@ -134,3 +134,20 @@
 .ut-del { margin: 0; }
 /* kulay ng bagong Facility sa listahan ng folders */
 .fold-facility { background: #e0f2fe; color: #075985; }
+
+/* Idagdag sa DULO ng css/categories.css: Accreditation page (admin/areas.php) */
+.acc-body { margin-bottom: 18px; }
+.acc-title { margin: 0 0 8px; }
+.cat-edit input.acc-name { flex: 1; min-width: 160px; max-width: 320px; font-weight: bold; }
+.acc-del { margin: 0 0 10px; }
+.acc-units { margin: 10px 0 14px; border: 1px solid #ddf7e9; border-radius: 10px; background: #fbfefc; }
+.acc-units > summary { cursor: pointer; padding: 10px 14px; font-weight: bold; color: #1f6c43; }
+.acc-units > summary small { color: #3fa56e; font-weight: normal; margin-left: 4px; }
+.acc-warn { margin-left: 10px; font-size: 12px; font-weight: normal; color: #b45309; }
+.acc-units form { padding: 0 14px 14px; }
+.acc-tree { max-height: 320px; overflow: auto; margin-bottom: 12px; padding: 6px 0; border-top: 1px solid #eef8f2; }
+.acc-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 14px; padding-top: 4px; padding-bottom: 4px; padding-right: 8px; }
+.acc-sub { font-size: 12px; color: #3fa56e; }
+.acc-sub-title { margin: 6px 0 4px; font-size: 13px; color: #1f6c43; }
+.acc-move { box-sizing: border-box; min-height: 40px; max-width: 150px; padding: 0 10px; border: 1px solid #ddf7e9; border-radius: 10px; background: #fff; color: #185d38; font: inherit; font-size: 13px; }
+.acc-add-area { margin-top: 14px; }

@@ -9,6 +9,7 @@ require_role('program');
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/helpers.php';
 require_once __DIR__ . '/../includes/area_links.php';
+require_once __DIR__ . '/../includes/accreditation.php';
 
 $active_page = 'files';
 
@@ -41,11 +42,7 @@ if (!$file || $file['is_archived'] || $file['area_id'] === null) {
 }
 $main_area = (int)$file['area_id'];
 
-$areas = [];
-$res = $conn->query("SELECT area_id, area_name, description FROM areas ORDER BY sort_order, area_id");
-while ($r = $res->fetch_assoc()) {
-    $areas[(int)$r['area_id']] = $r;
-}
+$areas = load_areas($conn, accessible_area_ids($conn, $unit_ids));   // only Areas this unit is designated for
 
 $selected = area_link_ids($conn, $file_id);
 $error    = "";

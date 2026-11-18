@@ -3,6 +3,7 @@ require_once __DIR__ . '/../includes/check.php';
 require_role('admin');
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/helpers.php';
+require_once __DIR__ . '/../includes/accreditation.php';
 require_once __DIR__ . '/../includes/area_links.php';
 
 $active_page = 'files';
@@ -42,9 +43,8 @@ if (!in_array($filter_status, file_statuses(), true)) {
 
 // Area filter: '' = every file, 'n' = normal files only, a number = one Area
 $areas = [];
-$res = $conn->query("SELECT area_id, area_name FROM areas ORDER BY sort_order, area_id");
-while ($r = $res->fetch_assoc()) {
-    $areas[(int)$r['area_id']] = $r['area_name'];
+foreach (load_areas($conn) as $aid => $r) {
+    $areas[$aid] = $r['area_name'];   // "PACUCOA · Area 1"
 }
 $filter_area = $_GET['area'] ?? '';
 if ($filter_area !== 'n') {
