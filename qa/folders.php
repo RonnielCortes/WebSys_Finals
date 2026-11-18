@@ -16,20 +16,11 @@ if (empty($_SESSION['csrf'])) {
 }
 $csrf = $_SESSION['csrf'];
 
-// What can go inside what
-$level_label = [
-    'education_level' => 'Education level',
-    'department'      => 'Department',
-    'program'         => 'Program',
-    'office'          => 'Office',
-];
-$allowed_children = [
-    ''                => ['education_level', 'office'],   // top level
-    'education_level' => ['department', 'program'],
-    'department'      => ['program'],
-    'program'         => [],
-    'office'          => ['office'],   // an office can have sub-offices (e.g. Accounting > Cashier)
-];
+// What can go inside what — the folder types are managed by Admin on admin/unit_types.php
+require_once __DIR__ . '/../includes/unit_types.php';
+$ut = load_unit_types($conn);
+$level_label      = $ut['label'];
+$allowed_children = $ut['children'];
 
 function clean_folder_name($s)
 {
@@ -260,7 +251,7 @@ $flash_text = [
                  placeholder="Meaning, e.g. College of Arts, Sciences, Education and Technology (optional)"
                  value="<?= htmlspecialchars($add_desc) ?>" aria-label="Description">
           <select name="parent_id" id="foldParent" aria-label="Inside">
-              <option value="0" data-allowed="education_level,office">Top level</option>
+              <option value="0" data-allowed="<?= htmlspecialchars(implode(',', $allowed_children[''])) ?>">Top level</option>
               <?php foreach ($parents as $id => $p): ?>
                   <option value="<?= (int)$id ?>" data-allowed="<?= htmlspecialchars(implode(',', $allowed_children[$p['level']])) ?>"
                       <?= ((int)($_POST['parent_id'] ?? 0) === (int)$id) ? 'selected' : '' ?>>
