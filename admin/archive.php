@@ -62,12 +62,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $conn->begin_transaction();
 
-                // its Area links go too
-                $stmt = $conn->prepare("DELETE FROM file_area_links WHERE file_id = ?");
-                $stmt->bind_param("i", $id);
-                $stmt->execute();
-                $stmt->close();
-
                 $stmt = $conn->prepare("DELETE FROM notifications WHERE file_id = ?");
                 $stmt->bind_param("i", $id);
                 $stmt->execute();
